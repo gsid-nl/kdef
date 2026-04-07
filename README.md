@@ -661,3 +661,18 @@ ArgoCD auto-discovers `.kdef` files and renders them using kdef.
 - [HashiCorp HCL](https://github.com/hashicorp/hcl) — parser
 - [Kubernetes API types](https://github.com/kubernetes/api) — typed K8s objects
 - [Cobra](https://github.com/spf13/cobra) — CLI framework
+
+## Author
+
+**Guido Smit** — [GSID](https://gsid.nl)
+
+- GitHub: [@gesmit](https://github.com/gesmit)
+- Email: guido@gsid.nl
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE) for details.
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
