@@ -1,0 +1,377 @@
+{
+  "Deployment": {
+    "prefix": "deployment",
+    "description": "Create a new deployment block",
+    "body": [
+      "deployment \"${1:name}\" {",
+      "  namespace = \"${2:default}\"",
+      "",
+      "  container \"${1:name}\" {",
+      "    image = \"${3:image:tag}\"",
+      "",
+      "    port \"${4:8080}\" \"${5:http}\" {",
+      "      ${6|health,tcp_health|} = ${7|\"/health\",true|}",
+      "    }",
+      "",
+      "    resources {",
+      "      cpu    = \"${8:100m..500m}\"",
+      "      memory = \"${9:128Mi..256Mi}\"",
+      "    }",
+      "  }",
+      "",
+      "  service {",
+      "    port \"${4:8080}\" \"${5:http}\" {}",
+      "  }",
+      "}"
+    ]
+  },
+  "Deployment with Ingress": {
+    "prefix": "deployment-ingress",
+    "description": "Create a deployment with service and ingress",
+    "body": [
+      "deployment \"${1:name}\" {",
+      "  namespace = \"${2:default}\"",
+      "",
+      "  container \"${1:name}\" {",
+      "    image = \"${3:image:tag}\"",
+      "",
+      "    port \"${4:8080}\" \"${5:http}\" {",
+      "      health = \"${6:/health}\"",
+      "    }",
+      "",
+      "    resources {",
+      "      cpu    = \"${7:100m..500m}\"",
+      "      memory = \"${8:128Mi..256Mi}\"",
+      "    }",
+      "  }",
+      "",
+      "  service {",
+      "    port \"${4:8080}\" \"${5:http}\" {}",
+      "  }",
+      "",
+      "  ingress {",
+      "    host = \"${9:app.example.com}\"",
+      "    tls  = true",
+      "  }",
+      "}"
+    ]
+  },
+  "Deployment Multi-Container": {
+    "prefix": "deployment-multi",
+    "description": "Create a deployment with multiple containers",
+    "body": [
+      "deployment \"${1:name}\" {",
+      "  namespace        = \"${2:default}\"",
+      "  image_pull_secrets = [\"${3:regcred}\"]",
+      "",
+      "  container \"${1:name}\" {",
+      "    image = \"${4:image:tag}\"",
+      "",
+      "    port \"${5:9000}\" \"${6:http}\" {",
+      "      tcp_health = true",
+      "    }",
+      "",
+      "    resources {",
+      "      cpu    = \"${7:200m..800m}\"",
+      "      memory = \"${8:256Mi..1Gi}\"",
+      "    }",
+      "  }",
+      "",
+      "  container \"${1:name}-nginx\" {",
+      "    image = \"nginx:stable-alpine\"",
+      "",
+      "    port \"80\" \"http\" {",
+      "      tcp_health = true",
+      "    }",
+      "  }",
+      "",
+      "  service {",
+      "    port \"80\" \"http\" {}",
+      "  }",
+      "",
+      "  ingress {",
+      "    host = \"${9:app.example.com}\"",
+      "    tls  = true",
+      "  }",
+      "}"
+    ]
+  },
+  "Worker Deployment": {
+    "prefix": "deployment-worker",
+    "description": "Create a worker deployment (no service/ingress)",
+    "body": [
+      "deployment \"${1:name}\" {",
+      "  namespace = \"${2:default}\"",
+      "",
+      "  container \"${1:name}\" {",
+      "    image   = \"${3:image:tag}\"",
+      "    command = [\"${4:command}\"]",
+      "",
+      "    resources {",
+      "      cpu    = \"${5:100m..500m}\"",
+      "      memory = \"${6:128Mi..256Mi}\"",
+      "    }",
+      "  }",
+      "",
+      "  scale {",
+      "    replicas = ${7:2}",
+      "  }",
+      "}"
+    ]
+  },
+  "Container": {
+    "prefix": "container",
+    "description": "Add a container block",
+    "body": [
+      "container \"${1:name}\" {",
+      "  image = \"${2:image:tag}\"",
+      "",
+      "  port \"${3:8080}\" \"${4:http}\" {",
+      "    ${5|health,tcp_health|} = ${6|\"/health\",true|}",
+      "  }",
+      "",
+      "  resources {",
+      "    cpu    = \"${7:100m..500m}\"",
+      "    memory = \"${8:128Mi..256Mi}\"",
+      "  }",
+      "}"
+    ]
+  },
+  "Init Container": {
+    "prefix": "init",
+    "description": "Add an init container block",
+    "body": [
+      "init \"${1:name}\" {",
+      "  image = \"${2:image:tag}\"",
+      "  command = [",
+      "    \"${3:/bin/sh}\",",
+      "    \"${4:-c}\",",
+      "    \"${5:command}\",",
+      "  ]",
+      "  volumes = [\"${6:shared}\"]",
+      "}"
+    ]
+  },
+  "CronJob": {
+    "prefix": "cronjob",
+    "description": "Create a cronjob block",
+    "body": [
+      "cronjob \"${1:name}\" {",
+      "  namespace = \"${2:default}\"",
+      "  schedule  = \"${3:*/5 * * * *}\"",
+      "  image     = \"${4:image:tag}\"",
+      "",
+      "  command = [",
+      "    \"${5:command}\",",
+      "  ]",
+      "",
+      "  deadline = \"${6:4m}\"",
+      "}"
+    ]
+  },
+  "ConfigMap": {
+    "prefix": "configmap",
+    "description": "Create a configmap block",
+    "body": [
+      "configmap \"${1:name}\" {",
+      "  namespace = \"${2:default}\"",
+      "",
+      "  data = {",
+      "    \"${3:key}\" = \"${4:value}\"",
+      "  }",
+      "}"
+    ]
+  },
+  "ConfigMap from File": {
+    "prefix": "configmap-file",
+    "description": "Create a configmap from file",
+    "body": [
+      "configmap \"${1:name}\" {",
+      "  namespace = \"${2:default}\"",
+      "",
+      "  data = {",
+      "    \"${3:filename}\" = file(\"${4:configs/$3}\")$0",
+      "  }",
+      "}"
+    ]
+  },
+  "Variable": {
+    "prefix": "variable",
+    "description": "Declare a variable",
+    "body": [
+      "variable \"${1:name}\" {",
+      "  type    = \"${2|string,number,bool|}\"",
+      "  default = \"${3:value}\"",
+      "}"
+    ]
+  },
+  "Ingress": {
+    "prefix": "ingress",
+    "description": "Add an ingress block",
+    "body": [
+      "ingress {",
+      "  host       = \"${1:app.example.com}\"",
+      "  tls        = true",
+      "  tls_secret = \"${2:tls-secret}\"",
+      "}"
+    ]
+  },
+  "Ingress with Annotations": {
+    "prefix": "ingress-annotations",
+    "description": "Add an ingress block with nginx annotations",
+    "body": [
+      "ingress {",
+      "  host       = \"${1:app.example.com}\"",
+      "  tls        = true",
+      "  tls_secret = \"${2:tls-secret}\"",
+      "",
+      "  annotations = {",
+      "    \"nginx.ingress.kubernetes.io\" = {",
+      "      \"proxy-body-size\"    = \"${3:50m}\"",
+      "      \"ssl-redirect\"       = \"true\"",
+      "      \"proxy-read-timeout\" = \"${4:120}\"",
+      "    }",
+      "  }",
+      "}"
+    ]
+  },
+  "Service": {
+    "prefix": "service",
+    "description": "Add a service block",
+    "body": [
+      "service {",
+      "  port \"${1:80}\" \"${2:http}\" {}",
+      "}"
+    ]
+  },
+  "Volume - ConfigMap": {
+    "prefix": "volume-configmap",
+    "description": "Add a configmap volume mount",
+    "body": [
+      "volume \"${1:name}\" {",
+      "  mount_path = \"${2:/etc/config}\"",
+      "  sub_path   = \"${3:config.yaml}\"",
+      "  config_map = \"${4:$1}\"",
+      "}"
+    ]
+  },
+  "Volume - Secret": {
+    "prefix": "volume-secret",
+    "description": "Add a secret volume mount",
+    "body": [
+      "volume \"${1:name}\" {",
+      "  mount_path = \"${2:/etc/secret}\"",
+      "  secret     = \"${3:$1}\"",
+      "  read_only  = true",
+      "}"
+    ]
+  },
+  "Volume - EmptyDir": {
+    "prefix": "volume-empty",
+    "description": "Add an emptyDir volume mount",
+    "body": [
+      "volume \"${1:name}\" {",
+      "  mount_path = \"${2:/tmp}\"",
+      "  empty_dir  = true",
+      "}"
+    ]
+  },
+  "Env From ConfigMap": {
+    "prefix": "env-from-configmap",
+    "description": "Import env vars from a ConfigMap",
+    "body": [
+      "env_from {",
+      "  config_map = \"${1:config-name}\"",
+      "}"
+    ]
+  },
+  "Env From Secret": {
+    "prefix": "env-from-secret",
+    "description": "Import env vars from a Secret",
+    "body": [
+      "env_from {",
+      "  secret = \"${1:secret-name}\"",
+      "}"
+    ]
+  },
+  "Secret Reference": {
+    "prefix": "secret",
+    "description": "Reference a secret key",
+    "body": "secret(\"${1:secret-name}\", \"${2:key}\")"
+  },
+  "Resources": {
+    "prefix": "resources",
+    "description": "Add a resources block",
+    "body": [
+      "resources {",
+      "  cpu    = \"${1:100m..500m}\"",
+      "  memory = \"${2:128Mi..256Mi}\"",
+      "}"
+    ]
+  },
+  "Security Context": {
+    "prefix": "security-context",
+    "description": "Add a security context block",
+    "body": [
+      "security_context {",
+      "  run_as_user     = ${1:1000}",
+      "  run_as_group    = ${2:1000}",
+      "  run_as_non_root = true",
+      "}"
+    ]
+  },
+  "Autoscale": {
+    "prefix": "autoscale",
+    "description": "Add an autoscale (HPA) block",
+    "body": [
+      "autoscale {",
+      "  min = ${1:2}",
+      "  max = ${2:10}",
+      "  cpu = ${3:70}",
+      "}"
+    ]
+  },
+  "For Loop": {
+    "prefix": "for",
+    "description": "Create a for loop block",
+    "body": [
+      "for \"${1:item}\" \"var.${2:items}\" {",
+      "  deployment \"${3:name}\" {",
+      "    name = \"${3:name}-\\${${1:item}.name}\"",
+      "",
+      "    container \"${3:name}\" {",
+      "      image = \"${4:image:tag}\"",
+      "    }",
+      "  }",
+      "}"
+    ]
+  },
+  "If Conditional": {
+    "prefix": "if",
+    "description": "Create a conditional block",
+    "body": [
+      "if {",
+      "  condition = var.${1:environment} == \"${2:production}\"",
+      "",
+      "  ${0}",
+      "}"
+    ]
+  },
+  "Ingress Defaults": {
+    "prefix": "ingress-defaults",
+    "description": "Define shared ingress defaults",
+    "body": [
+      "ingress_defaults {",
+      "  tls        = true",
+      "  tls_secret = \"${1:wildcard-tls}\"",
+      "",
+      "  annotations = {",
+      "    \"nginx.ingress.kubernetes.io\" = {",
+      "      \"force-ssl-redirect\" = \"true\"",
+      "      \"proxy-body-size\"    = \"${2:50m}\"",
+      "    }",
+      "  }",
+      "}"
+    ]
+  }
+}

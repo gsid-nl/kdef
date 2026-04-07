@@ -1,0 +1,36 @@
+deployment "acme-api" {
+  namespace = "acme-app"
+
+  container "api" {
+    image = "registry.example.com/acme/api:${var.image_tag}"
+
+    port "8080" "http" {
+      health = "/health"
+      ready  = "/ready"
+    }
+
+    env {
+      APP_ENV = var.environment
+      LOG_LVL = "info"
+    }
+
+    resources {
+      cpu    = "200m..1000m"
+      memory = "256Mi..512Mi"
+    }
+  }
+
+  scale {
+    replicas = 3
+  }
+
+  service {
+    port "8080" "http" {}
+  }
+
+  ingress {
+    host       = "api.acme.dev"
+    tls        = true
+    tls_secret = "acme-cert-tls"
+  }
+}

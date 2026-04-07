@@ -1,0 +1,32 @@
+deployment "acme-api" {
+  container "api" {
+    image = "registry.example.com/acme/api:${var.image_tag}"
+
+    port "8080" "http" {
+      health = "/health"
+    }
+  }
+
+  scale {
+    replicas = var.environment == "production" ? 3 : 1
+  }
+
+  service {
+    port "8080" "http" {}
+  }
+}
+
+if {
+  condition = var.environment == "production"
+
+  deployment "extra-consumer" {
+    container "consumer" {
+      image   = "registry.example.com/acme/api:${var.image_tag}"
+      command = ["php", "bin/console", "messenger:consume", "high-priority"]
+    }
+
+    scale {
+      replicas = 2
+    }
+  }
+}

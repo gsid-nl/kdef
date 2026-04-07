@@ -1,0 +1,54 @@
+{
+  "name": "kdef",
+  "displayName": "kdef - Kubernetes Declarative Configuration",
+  "description": "Syntax highlighting, snippets, and language support for .kdef files",
+  "version": "0.2.0",
+  "publisher": "gsid",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "kubernetes",
+    "k8s",
+    "kdef",
+    "hcl",
+    "devops",
+    "infrastructure"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gsid-nl/kdef"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "kdef",
+        "aliases": [
+          "kdef",
+          "Kdef"
+        ],
+        "extensions": [
+          ".kdef"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "kdef",
+        "scopeName": "source.kdef",
+        "path": "./syntaxes/kdef.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "kdef",
+        "path": "./snippets/kdef.json"
+      }
+    ]
+  }
+}

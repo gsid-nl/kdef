@@ -1,0 +1,17 @@
+deployment "simple-api" {
+  container "simple-api" {
+    image = "nginx:${var.image_tag}"
+
+    port "8080" "http" {
+      health = "/health"
+    }
+  }
+
+  scale {
+    replicas = 2
+  }
+
+  service {
+    port "8080" "http" {}
+  }
+}

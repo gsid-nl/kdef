@@ -1,0 +1,6 @@
+import = ["../shared/global-vars.kdef"]
+
+variable "image_tag" {
+  type    = "string"
+  default = "v1.0.0"
+}

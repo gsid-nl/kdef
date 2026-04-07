@@ -1,0 +1,180 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "kdef",
+  "scopeName": "source.kdef",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#heredoc" },
+    { "include": "#blocks" },
+    { "include": "#attributes" },
+    { "include": "#expressions" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.hash.kdef",
+          "match": "#.*$"
+        },
+        {
+          "name": "comment.line.double-slash.kdef",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.kdef",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "heredoc": {
+      "patterns": [
+        {
+          "name": "string.unquoted.heredoc.kdef",
+          "begin": "<<-?\\s*(\\w+)\\s*$",
+          "end": "^\\s*(\\1)\\s*$",
+          "beginCaptures": {
+            "1": { "name": "keyword.control.heredoc.kdef" }
+          },
+          "endCaptures": {
+            "1": { "name": "keyword.control.heredoc.kdef" }
+          }
+        }
+      ]
+    },
+    "blocks": {
+      "patterns": [
+        {
+          "comment": "Top-level block types",
+          "match": "^\\s*(deployment|cronjob|configmap|variable|for|if)\\b",
+          "captures": {
+            "1": { "name": "keyword.declaration.kdef" }
+          }
+        },
+        {
+          "comment": "Nested block types",
+          "match": "^\\s*(container|init|service|ingress|scale|resources|env|env_from|volume|security_context|autoscale|ingress_defaults|override|use_vars|annotations|port|data)\\b",
+          "captures": {
+            "1": { "name": "keyword.other.block.kdef" }
+          }
+        },
+        {
+          "comment": "Block labels (quoted strings after block type)",
+          "match": "(?<=deployment|cronjob|configmap|container|init|volume|port|variable|for|override)\\s+(\"[^\"]*\")",
+          "captures": {
+            "1": { "name": "entity.name.type.kdef" }
+          }
+        }
+      ]
+    },
+    "attributes": {
+      "patterns": [
+        {
+          "comment": "Known attribute names",
+          "match": "^\\s*(image|image_pull_policy|image_pull_secrets|namespace|name|command|schedule|concurrency|deadline|restart|container_name|service_account|selector|labels|host|hosts|tls|tls_secret|issuer|service_name|mount_path|sub_path|read_only|secret|config_map|empty_dir|pvc|host_path|health|ready|tcp_health|tcp_ready|initial_delay|period|timeout|failures|successes|cpu|memory|ephemeral_storage|target|type|prefix|condition|import|raw|run_as_user|run_as_group|run_as_non_root|read_only_root|fs_group|min|max|replicas|volumes)\\s*=",
+          "captures": {
+            "1": { "name": "variable.other.property.kdef" }
+          }
+        },
+        {
+          "comment": "Generic attribute assignment",
+          "match": "^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*=",
+          "captures": {
+            "1": { "name": "variable.other.property.kdef" }
+          }
+        }
+      ]
+    },
+    "expressions": {
+      "patterns": [
+        {
+          "comment": "Built-in functions",
+          "match": "\\b(secret|file|match)\\s*\\(",
+          "captures": {
+            "1": { "name": "support.function.builtin.kdef" }
+          }
+        },
+        {
+          "comment": "Variable references",
+          "match": "\\b(var)\\.(\\w+)",
+          "captures": {
+            "1": { "name": "variable.language.kdef" },
+            "2": { "name": "variable.other.member.kdef" }
+          }
+        },
+        {
+          "comment": "Iterator references (in for loops)",
+          "match": "\\b(tenant|item)\\.(\\w+)",
+          "captures": {
+            "1": { "name": "variable.language.kdef" },
+            "2": { "name": "variable.other.member.kdef" }
+          }
+        },
+        {
+          "comment": "String interpolation",
+          "name": "string.quoted.double.kdef",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.kdef",
+              "match": "\\\\."
+            },
+            {
+              "name": "meta.embedded.expression.kdef",
+              "begin": "\\$\\{",
+              "end": "\\}",
+              "beginCaptures": {
+                "0": { "name": "punctuation.section.interpolation.begin.kdef" }
+              },
+              "endCaptures": {
+                "0": { "name": "punctuation.section.interpolation.end.kdef" }
+              },
+              "patterns": [
+                {
+                  "match": "\\b(var)\\.(\\w+)",
+                  "captures": {
+                    "1": { "name": "variable.language.kdef" },
+                    "2": { "name": "variable.other.member.kdef" }
+                  }
+                },
+                {
+                  "match": "\\b(\\w+)\\.(\\w+)",
+                  "captures": {
+                    "1": { "name": "variable.language.kdef" },
+                    "2": { "name": "variable.other.member.kdef" }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "comment": "Boolean values",
+          "name": "constant.language.boolean.kdef",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "comment": "Numeric values",
+          "name": "constant.numeric.kdef",
+          "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+        },
+        {
+          "comment": "Type keywords in variable declarations",
+          "name": "storage.type.kdef",
+          "match": "\"(string|number|bool|enum\\[.*?\\])\""
+        },
+        {
+          "comment": "Ternary operator",
+          "match": "\\?|:",
+          "name": "keyword.operator.ternary.kdef"
+        },
+        {
+          "comment": "Comparison operators",
+          "match": "==|!=|>=|<=|>|<",
+          "name": "keyword.operator.comparison.kdef"
+        }
+      ]
+    }
+  }
+}
