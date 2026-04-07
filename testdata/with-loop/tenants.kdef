@@ -1,0 +1,32 @@
+for "tenant" "var.tenants" {
+  deployment "booking" {
+    name      = "booking-${tenant.name}"
+    namespace = "acme-app"
+
+    container "booking" {
+      image = "registry.example.com/acme/booking:${var.image_tag}"
+
+      env {
+        TENANT_ID = tenant.name
+        APP_URL   = "https://${tenant.domain}"
+      }
+
+      port "8080" "http" {
+        health = "/health"
+      }
+    }
+
+    scale {
+      replicas = tenant.plan == "enterprise" ? 3 : 1
+    }
+
+    service {
+      port "8080" "http" {}
+    }
+
+    ingress {
+      host = tenant.domain
+      tls  = true
+    }
+  }
+}

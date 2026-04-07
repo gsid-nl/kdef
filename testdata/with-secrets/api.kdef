@@ -1,0 +1,21 @@
+deployment "acme-api" {
+  namespace = "acme-app"
+
+  container "api" {
+    image = "registry.example.com/acme/api:${var.image_tag}"
+
+    env {
+      APP_ENV      = var.environment
+      DATABASE_URL = secret("db-credentials", "DATABASE_URL")
+      JWT_SECRET   = secret("jwt-keys", "SECRET")
+    }
+
+    port "8080" "http" {
+      health = "/health"
+    }
+  }
+
+  service {
+    port "8080" "http" {}
+  }
+}

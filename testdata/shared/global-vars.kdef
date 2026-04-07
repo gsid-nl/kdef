@@ -1,0 +1,4 @@
+variable "registry" {
+  type    = "string"
+  default = "registry.example.com"
+}

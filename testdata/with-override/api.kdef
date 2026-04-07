@@ -1,0 +1,24 @@
+deployment "acme-api" {
+  namespace = "acme-app"
+
+  container "api" {
+    image = "registry.example.com/acme/api:${var.image_tag}"
+
+    port "8080" "http" {
+      health = "/health"
+    }
+
+    resources {
+      cpu    = "100m..500m"
+      memory = "128Mi..256Mi"
+    }
+  }
+
+  scale {
+    replicas = 1
+  }
+
+  service {
+    port "8080" "http" {}
+  }
+}

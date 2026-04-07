@@ -1,0 +1,7 @@
+{
+  "tenants": [
+    {"name": "acme", "domain": "acme.acme.dev", "plan": "enterprise"},
+    {"name": "widgets", "domain": "widgets.acme.dev", "plan": "pro"},
+    {"name": "demo", "domain": "demo.acme.dev", "plan": "starter"}
+  ]
+}

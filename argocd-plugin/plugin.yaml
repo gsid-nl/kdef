@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ConfigManagementPlugin
+metadata:
+  name: kdef
+spec:
+  version: v1.0
+  init:
+    command: ["sh", "-c", "kdef version"]
+  generate:
+    command: ["sh", "-c", "kdef render --dir . ${KDEF_ENV:+--env $KDEF_ENV} ${KDEF_VALUES:+--values $KDEF_VALUES}"]
+  discover:
+    find:
+      glob: "**/*.kdef"
+  parameters:
+    static:
+      - name: KDEF_ENV
+        title: Environment
+        tooltip: "Environment name (loads environments/<env>.kdef)"
+        required: false
+      - name: KDEF_VALUES
+        title: Values file
+        tooltip: "Path to JSON values file"
+        required: false
