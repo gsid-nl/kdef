@@ -193,6 +193,7 @@ func parseContainerBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Containe
 			{Name: "image", Required: true},
 			{Name: "image_pull_policy"},
 			{Name: "command"},
+			{Name: "working_dir"},
 		},
 		Blocks: []hcl.BlockHeaderSchema{
 			{Type: "port", LabelNames: []string{"number", "name"}},
@@ -231,6 +232,14 @@ func parseContainerBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Containe
 				_, v := it.Element()
 				c.Command = append(c.Command, v.AsString())
 			}
+		}
+	}
+
+	if attr, ok := content.Attributes["working_dir"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			c.WorkingDir = val.AsString()
 		}
 	}
 
