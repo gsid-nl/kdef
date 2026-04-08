@@ -1,0 +1,6 @@
+images {
+  api  = "registry.example.com/api:0.8.38"
+  cdn  = "registry.example.com/cdn:0.2.13"
+  ui   = "registry.example.com/ui:0.1.45"
+  nginx    = "registry.example.com/nginx:stable"
+}

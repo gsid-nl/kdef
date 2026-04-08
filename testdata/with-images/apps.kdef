@@ -1,0 +1,44 @@
+deployment "api" {
+  namespace = "fos"
+
+  container "api" {
+    image       = image("api")
+    working_dir = "/app"
+
+    env {
+      APP_ENV = var.environment
+    }
+
+    port "8080" "http" {
+      health = "/health"
+    }
+  }
+
+  container "nginx" {
+    image = image("nginx")
+
+    port "80" "http" {
+      tcp_health = true
+    }
+  }
+
+  service {
+    port "80" "http" {}
+  }
+}
+
+deployment "cdn" {
+  namespace = "fos"
+
+  container "cdn" {
+    image = image("cdn")
+
+    port "3000" "http" {
+      health = "/health"
+    }
+  }
+
+  service {
+    port "3000" "http" {}
+  }
+}
