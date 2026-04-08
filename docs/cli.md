@@ -7,7 +7,8 @@
 | `kdef apply` | Deploy to cluster (server-side apply) |
 | `kdef validate` | Check for type errors and missing references |
 | `kdef import` | Generate `.kdef` from existing K8s resources |
-| `kdef seal` | Encrypt values for use in `sealedsecret` blocks |
+| `kdef seal` | Encrypt a single value for use in `sealedsecret` blocks |
+| `kdef seal-secret` | Seal an entire Kubernetes Secret into a `sealedsecret` block |
 | `kdef version` | Print version information |
 
 ## Common Flags
@@ -68,3 +69,21 @@ kdef seal --secret db-credentials --key PASSWORD --value "hunter2" \
 ```
 
 The command outputs the encrypted blob to stdout, plus a usage snippet showing how to paste it into a `.kdef` file.
+
+## Seal Secret
+
+Seal an entire Kubernetes Secret into a ready-to-use `sealedsecret` block. Fetches the Secret from the cluster or reads from a YAML file, decodes all values, encrypts each key with kubeseal, and outputs the complete block.
+
+```bash
+# From live cluster
+kdef seal-secret --name db-credentials --namespace production
+
+# From a YAML file
+kdef seal-secret --from-file secret.yaml
+
+# With custom controller
+kdef seal-secret --name db-credentials --namespace production \
+  --controller-name sealed-secrets
+```
+
+Output is a complete `sealedsecret` block ready to paste into a `.kdef` file.
