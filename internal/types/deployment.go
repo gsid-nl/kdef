@@ -26,6 +26,7 @@ type ContainerConfig struct {
 	Image           string
 	ImagePullPolicy string
 	Command         []string
+	WorkingDir      string
 	Ports           []PortConfig
 	Env             []EnvEntry
 	EnvFrom         []EnvFromEntry
