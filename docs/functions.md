@@ -41,6 +41,20 @@ env {
 }
 ```
 
+## `configmap()` — ConfigMap Key References
+
+Reference individual keys from a ConfigMap — generates `valueFrom.configMapKeyRef`. Useful when the env var name differs from the ConfigMap key:
+
+```hcl
+env {
+  # Maps NUXT_PUBLIC_BASE_URL to the FOS_API_URL key in env-configmap
+  NUXT_PUBLIC_BASE_URL = configmap("env-configmap", "FOS_API_URL")
+  NUXT_PUBLIC_CDN_URL  = configmap("env-configmap", "FOS_CDN_URL")
+}
+```
+
+This is different from `env_from { config_map = "..." }` which imports *all* keys with their original names. Use `configmap()` when you need to remap a key to a different env var name.
+
 ## `file()` — File Contents
 
 Read file contents into a ConfigMap data field:
