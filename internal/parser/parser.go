@@ -40,12 +40,15 @@ func LoadWithOptions(opts LoadOptions) (*types.KdefConfig, error) {
 
 		// Process imports first (imported vars have lower precedence)
 		for _, importPath := range result.Imports {
-			importedVars, diags := ParseVariableFile(importPath)
+			importResult, diags := ParseVariableFileWithImports(importPath)
 			if diags.HasErrors() {
 				return nil, diags
 			}
-			for k, v := range importedVars {
+			for k, v := range importResult.Variables {
 				config.Variables[k] = v
+			}
+			if importResult.IngressDefaults != nil && config.IngressDefaults == nil {
+				config.IngressDefaults = importResult.IngressDefaults
 			}
 		}
 
