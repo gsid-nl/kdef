@@ -35,9 +35,10 @@ func ParseBytes(src []byte, filename string, ctx *hcl.EvalContext) (FileResult, 
 
 // FileResult holds all parsed blocks from a single file.
 type FileResult struct {
-	Deployments []types.DeploymentConfig
-	CronJobs    []types.CronJobConfig
-	ConfigMaps  []types.ConfigMapConfig
+	Deployments   []types.DeploymentConfig
+	CronJobs      []types.CronJobConfig
+	ConfigMaps    []types.ConfigMapConfig
+	SealedSecrets []types.SealedSecretConfig
 }
 
 func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnostics) {
@@ -52,6 +53,7 @@ func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnos
 		result.CronJobs = append(result.CronJobs, fr.CronJobs...)
 		result.ConfigMaps = append(result.ConfigMaps, fr.ConfigMaps...)
 		result.Deployments = append(result.Deployments, fr.Deployments...)
+		result.SealedSecrets = append(result.SealedSecrets, fr.SealedSecrets...)
 	}
 
 	// Pre-processing: extract and evaluate "if" blocks
@@ -77,6 +79,7 @@ var topLevelSchema = &hcl.BodySchema{
 		{Type: "deployment", LabelNames: []string{"name"}},
 		{Type: "cronjob", LabelNames: []string{"name"}},
 		{Type: "configmap", LabelNames: []string{"name"}},
+		{Type: "sealedsecret", LabelNames: []string{"name"}},
 	},
 }
 
@@ -105,6 +108,12 @@ func parseBlocksFromBody(body hcl.Body, ctx *hcl.EvalContext, result *FileResult
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				result.ConfigMaps = append(result.ConfigMaps, cm)
+			}
+		case "sealedsecret":
+			ss, moreDiags := parseSealedSecretBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.SealedSecrets = append(result.SealedSecrets, ss)
 			}
 		}
 	}
