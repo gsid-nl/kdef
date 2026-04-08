@@ -81,8 +81,14 @@ func LoadWithOptions(opts LoadOptions) (*types.KdefConfig, error) {
 		}
 	}
 
+	// Pre-scan for images {} blocks across all .kdef files
+	images, err := ScanImages(opts.Dir)
+	if err != nil {
+		return nil, err
+	}
+
 	// Build EvalContext
-	ctx, diags := BuildEvalContext(config.Variables, opts.Overrides, extraValues, opts.Dir)
+	ctx, diags := BuildEvalContext(config.Variables, opts.Overrides, extraValues, images, opts.Dir)
 	if diags.HasErrors() {
 		return nil, diags
 	}
