@@ -247,6 +247,9 @@ func buildContainerV2(c types.ContainerConfig) corev1.Container {
 	if len(c.Command) > 0 {
 		container.Command = c.Command
 	}
+	if c.WorkingDir != "" {
+		container.WorkingDir = c.WorkingDir
+	}
 
 	for _, p := range c.Ports {
 		container.Ports = append(container.Ports, corev1.ContainerPort{
