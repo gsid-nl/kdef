@@ -24,12 +24,23 @@ func GenerateCertificate(app types.AppConfig) *unstructured.Unstructured {
 		return nil
 	}
 
+	hosts := allHosts(app.Ingress)
+	if len(hosts) == 0 {
+		return nil
+	}
+
 	issuer := app.Ingress.Issuer
 	if issuer == "" {
 		issuer = defaultIssuer
 	}
 
-	secretName := fmt.Sprintf("%s-tls", strings.ReplaceAll(app.Ingress.Host, ".", "-"))
+	secretName := fmt.Sprintf("%s-tls", strings.ReplaceAll(hosts[0], ".", "-"))
+
+	// Build dnsNames as []interface{} for unstructured
+	dnsNames := make([]interface{}, len(hosts))
+	for i, h := range hosts {
+		dnsNames[i] = h
+	}
 
 	cert := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -45,7 +56,7 @@ func GenerateCertificate(app types.AppConfig) *unstructured.Unstructured {
 			},
 			"spec": map[string]interface{}{
 				"secretName": secretName,
-				"dnsNames":   []interface{}{app.Ingress.Host},
+				"dnsNames":   dnsNames,
 				"issuerRef": map[string]interface{}{
 					"name": issuer,
 					"kind": "ClusterIssuer",
