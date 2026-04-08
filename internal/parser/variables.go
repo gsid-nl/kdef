@@ -271,11 +271,10 @@ func resolveVarType(typeStr string) (cty.Type, []string, error) {
 	}
 }
 
-// BuildEvalContext creates an hcl.EvalContext from parsed variable declarations
-// and optional overrides (from --set flags or value files).
 // BuildEvalContext creates an hcl.EvalContext from parsed variable declarations,
-// optional overrides (from --set flags), and additional cty values (from --values files).
-func BuildEvalContext(vars map[string]types.VariableDecl, overrides map[string]string, extraValues map[string]cty.Value, baseDir ...string) (*hcl.EvalContext, hcl.Diagnostics) {
+// optional overrides (from --set flags), additional cty values (from --values files),
+// and an image registry (from images {} blocks).
+func BuildEvalContext(vars map[string]types.VariableDecl, overrides map[string]string, extraValues map[string]cty.Value, images map[string]string, baseDir ...string) (*hcl.EvalContext, hcl.Diagnostics) {
 	var diags hcl.Diagnostics
 	varValues := make(map[string]cty.Value)
 
@@ -315,6 +314,7 @@ func BuildEvalContext(vars map[string]types.VariableDecl, overrides map[string]s
 		Functions: map[string]function.Function{
 			"secret": secretFunction(),
 			"file":   FileFunction(resolveBaseDir(baseDir)),
+			"image":  ImageFunction(images),
 		},
 	}
 

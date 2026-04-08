@@ -80,6 +80,7 @@ var topLevelSchema = &hcl.BodySchema{
 		{Type: "cronjob", LabelNames: []string{"name"}},
 		{Type: "configmap", LabelNames: []string{"name"}},
 		{Type: "sealedsecret", LabelNames: []string{"name"}},
+		{Type: "images"},
 	},
 }
 
