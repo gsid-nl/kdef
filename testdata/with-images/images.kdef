@@ -1,0 +1,6 @@
+images {
+  fos-api  = "reg.gsid.nl/fos-api:0.8.38"
+  fos-cdn  = "reg.gsid.nl/fos-cdn:0.2.13"
+  fos-ui   = "reg.gsid.nl/fos-ui:0.1.45"
+  nginx    = "reg.gsid.nl/nginx:stable"
+}

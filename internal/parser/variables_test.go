@@ -139,7 +139,7 @@ variable "image_tag" {
 
 	// Test with override
 	overrides := map[string]string{"image_tag": "v2.0.0"}
-	ctx, diags := BuildEvalContext(vars, overrides, nil)
+	ctx, diags := BuildEvalContext(vars, overrides, nil, nil)
 	if diags.HasErrors() {
 		t.Fatalf("context errors: %s", diags.Error())
 	}
@@ -173,7 +173,7 @@ variable "api_key" {
 		t.Fatalf("parse errors: %s", diags.Error())
 	}
 
-	_, diags = BuildEvalContext(vars, nil, nil)
+	_, diags = BuildEvalContext(vars, nil, nil, nil)
 	if !diags.HasErrors() {
 		t.Error("expected error for missing required variable")
 	}
