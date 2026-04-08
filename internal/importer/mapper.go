@@ -272,9 +272,8 @@ func writeEnv(b *strings.Builder, c corev1.Container, indent ...string) {
 			b.WriteString(fmt.Sprintf("%s%s = secret(%q, %q)\n",
 				inner, e.Name, e.ValueFrom.SecretKeyRef.Name, e.ValueFrom.SecretKeyRef.Key))
 		} else if e.ValueFrom != nil && e.ValueFrom.ConfigMapKeyRef != nil {
-			b.WriteString(fmt.Sprintf("%s# TODO: configmap ref %s/%s\n",
-				inner, e.ValueFrom.ConfigMapKeyRef.Name, e.ValueFrom.ConfigMapKeyRef.Key))
-			b.WriteString(fmt.Sprintf("%s%s = \"FIXME\"\n", inner, e.Name))
+			b.WriteString(fmt.Sprintf("%s%s = configmap(%q, %q)\n",
+				inner, e.Name, e.ValueFrom.ConfigMapKeyRef.Name, e.ValueFrom.ConfigMapKeyRef.Key))
 		} else {
 			b.WriteString(fmt.Sprintf("%s%s = %q\n", inner, e.Name, e.Value))
 		}

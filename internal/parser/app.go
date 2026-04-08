@@ -438,6 +438,9 @@ func parseEnvBlock(block *hcl.Block, ctx *hcl.EvalContext) ([]types.EnvEntry, hc
 		if val.Type().IsObjectType() && val.Type().HasAttribute("__secret_name") {
 			entry.SecretName = val.GetAttr("__secret_name").AsString()
 			entry.SecretKey = val.GetAttr("__secret_key").AsString()
+		} else if val.Type().IsObjectType() && val.Type().HasAttribute("__configmap_name") {
+			entry.ConfigMapName = val.GetAttr("__configmap_name").AsString()
+			entry.ConfigMapKey = val.GetAttr("__configmap_key").AsString()
 		} else if val.Type() == cty.String {
 			entry.Value = val.AsString()
 		} else {
