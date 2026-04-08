@@ -50,6 +50,10 @@ func GenerateCronJob(cj types.CronJobConfig) *batchv1.CronJob {
 		container.VolumeMounts = append(container.VolumeMounts, buildVolumeMount(v))
 	}
 
+	if cj.SecurityContext != nil {
+		container.SecurityContext = buildSecurityContext(cj.SecurityContext)
+	}
+
 	volumes := buildVolumes(cj.Volumes)
 
 	var imagePullSecrets []corev1.LocalObjectReference
