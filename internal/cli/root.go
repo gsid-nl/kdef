@@ -40,5 +40,6 @@ func init() {
 	rootCmd.AddCommand(applyCmd)
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(sealCmd)
+	rootCmd.AddCommand(sealSecretCmd)
 	rootCmd.AddCommand(versionCmd)
 }

@@ -92,7 +92,7 @@ kdef apply --dir k8s/ --dry-run   # preview first
 - [Variables](docs/variables.md) — typed variables, imports, ingress defaults, environment overrides
 - [Functions](docs/functions.md) — `image()`, `secret()`, `configmap()`, `file()`
 - [Conditionals and Loops](docs/conditionals-and-loops.md) — `if` blocks, `for` loops, ternary
-- [CLI Commands](docs/cli.md) — render, diff, apply, import, seal
+- [CLI Commands](docs/cli.md) — render, diff, apply, import, seal, seal-secret
 - [Comparison](docs/comparison.md) — vs Kustomize, Helm, CUE, KCL, Pkl
 
 ## Project Structure
