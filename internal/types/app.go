@@ -80,12 +80,14 @@ type VolumeConfig struct {
 	HostPath  string // host path
 }
 
-// EnvEntry represents an environment variable — either a plain value or a secret reference.
+// EnvEntry represents an environment variable — either a plain value, a secret reference, or a configmap reference.
 type EnvEntry struct {
-	Name       string
-	Value      string // plain value (set if SecretName is empty)
-	SecretName string // K8s secret name (set for secret refs)
-	SecretKey  string // key within the secret
+	Name          string
+	Value         string // plain value (set if SecretName and ConfigMapName are empty)
+	SecretName    string // K8s secret name (set for secret refs)
+	SecretKey     string // key within the secret
+	ConfigMapName string // K8s configmap name (set for configmap refs)
+	ConfigMapKey  string // key within the configmap
 }
 
 // EnvFromEntry imports all keys from a ConfigMap or Secret as env vars.
