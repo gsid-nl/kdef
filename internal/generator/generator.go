@@ -27,5 +27,8 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 	for _, cm := range config.ConfigMaps {
 		result["configmap-"+cm.Name] = []Manifest{{Object: GenerateConfigMap(cm)}}
 	}
+	for _, ss := range config.SealedSecrets {
+		result["sealedsecret-"+ss.Name] = []Manifest{{Object: GenerateSealedSecret(ss)}}
+	}
 	return result
 }

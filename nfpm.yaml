@@ -1,0 +1,19 @@
+name: kdef
+arch: ${GOARCH}
+platform: linux
+version: v${VERSION}
+maintainer: "Guido Smit <guido@gsid.nl>"
+description: "Declarative Kubernetes configuration language — compiles .kdef files to standard K8s YAML"
+homepage: "https://github.com/gsid-nl/kdef"
+license: "MIT"
+
+contents:
+  - src: dist/kdef-linux-${GOARCH}
+    dst: /usr/bin/kdef
+    file_info:
+      mode: 0755
+
+  - src: completions/kdef.bash
+    dst: /usr/share/bash-completion/completions/kdef
+    file_info:
+      mode: 0644

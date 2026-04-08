@@ -14,9 +14,10 @@ var rootCmd = &cobra.Command{
 	Long: `kdef compiles declarative .kdef files into standard Kubernetes YAML manifests.
 
 Block types:
-  deployment   K8s Deployment with explicit containers, service, and ingress
-  cronjob      K8s CronJob
-  configmap    K8s ConfigMap`,
+  deployment     K8s Deployment with explicit containers, service, and ingress
+  cronjob        K8s CronJob
+  configmap      K8s ConfigMap
+  sealedsecret   Bitnami SealedSecret (encrypted secrets safe to commit)`,
 }
 
 var versionCmd = &cobra.Command{
@@ -38,5 +39,6 @@ func init() {
 	rootCmd.AddCommand(diffCmd)
 	rootCmd.AddCommand(applyCmd)
 	rootCmd.AddCommand(importCmd)
+	rootCmd.AddCommand(sealCmd)
 	rootCmd.AddCommand(versionCmd)
 }

@@ -52,6 +52,46 @@ make build
 ./kdef version
 ```
 
+### Cross-platform binaries
+
+```bash
+# Build for all platforms (Linux, macOS, Windows × amd64/arm64)
+make build-all
+```
+
+Produces standalone binaries in `dist/`:
+
+| Binary | Platform |
+|--------|----------|
+| `kdef-linux-amd64` | Linux x86_64 |
+| `kdef-linux-arm64` | Linux ARM64 (Raspberry Pi, Graviton) |
+| `kdef-darwin-amd64` | macOS Intel |
+| `kdef-darwin-arm64` | macOS Apple Silicon |
+| `kdef-windows-amd64.exe` | Windows x86_64 |
+
+### Linux packages
+
+Build `.deb`, `.rpm`, and `.apk` packages (requires [nfpm](https://nfpm.goreleaser.com)):
+
+```bash
+# Install nfpm (one-time)
+go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+
+# Build all packages
+make package
+
+# Override version
+make package VERSION=0.3.0
+```
+
+| Package | Distro | Architectures |
+|---------|--------|---------------|
+| `.deb` | Debian, Ubuntu | amd64, arm64 |
+| `.rpm` | RHEL, Fedora, CentOS | x86_64, aarch64 |
+| `.apk` | Alpine | x86_64, aarch64 |
+
+Packages install the binary to `/usr/bin/kdef` with bash completion.
+
 ## Quick Start
 
 ```bash
@@ -350,6 +390,45 @@ configmap "nginx-config" {
 }
 ```
 
+### `sealedsecret` — Bitnami Sealed Secret
+
+Define encrypted secrets that are safe to commit to git. Generates [Bitnami SealedSecret](https://github.com/bitnami-labs/sealed-secrets) CRD manifests.
+
+```hcl
+sealedsecret "db-credentials" {
+  namespace = "production"
+  type      = "Opaque"    # optional, defaults to "Opaque"
+
+  data = {
+    DATABASE_URL = "AgBy3i4OJSWK+PiTySYZZA9rO43cGDEq..."
+    PASSWORD     = "AgCE9F2h7GKJF8mL3nP5rS7tV9xB2dH4..."
+  }
+}
+```
+
+The values in `data` are kubeseal-encrypted ciphertexts. Use `kdef seal` to encrypt plaintext values (see below). The sealed-secrets controller in your cluster decrypts them into regular Kubernetes Secrets at deploy time.
+
+Pairs naturally with `secret()` references in deployments:
+
+```hcl
+sealedsecret "db-credentials" {
+  namespace = "production"
+  data = {
+    DATABASE_URL = "AgBy3i4OJSWK+PiTySYZZA9rO43cGDEq..."
+  }
+}
+
+deployment "api" {
+  namespace = "production"
+  container "api" {
+    image = "my-registry/api:${var.image_tag}"
+    env {
+      DATABASE_URL = secret("db-credentials", "DATABASE_URL")
+    }
+  }
+}
+```
+
 ## Variables
 
 ### Declaration (`vars.kdef`)
@@ -544,6 +623,7 @@ env {
 | `kdef apply` | Deploy to cluster (server-side apply) |
 | `kdef validate` | Check for type errors and missing references |
 | `kdef import` | Generate `.kdef` from existing K8s resources |
+| `kdef seal` | Encrypt values for use in `sealedsecret` blocks |
 | `kdef version` | Print version information |
 
 ### Common Flags
@@ -587,6 +667,24 @@ kdef apply --dir k8s/ --env production    # with environment overrides
 
 Uses `kubectl apply --server-side --force-conflicts` for clean resource management.
 
+### Seal
+
+Encrypt secret values using [kubeseal](https://github.com/bitnami-labs/sealed-secrets) for use in `sealedsecret` blocks. Requires `kubeseal` installed and a sealed-secrets controller running in the cluster.
+
+```bash
+# Encrypt a single value
+kdef seal --secret db-credentials --key PASSWORD --value "hunter2"
+
+# Encrypt from stdin
+echo -n "hunter2" | kdef seal --secret db-credentials --key PASSWORD
+
+# Specify namespace and controller
+kdef seal --secret db-credentials --key PASSWORD --value "hunter2" \
+  --namespace production --controller-name sealed-secrets
+```
+
+The command outputs the encrypted blob to stdout, plus a usage snippet showing how to paste it into a `.kdef` file.
+
 ## Project Structure
 
 ```
@@ -597,6 +695,7 @@ k8s/
 ├── admin.kdef                # deployment: admin (single container)
 ├── cronjobs.kdef             # cronjob definitions
 ├── configmaps.kdef           # configmap definitions
+├── secrets.kdef              # sealed secret definitions
 ├── environments/
 │   ├── staging.kdef          # staging overrides
 │   └── production.kdef       # production overrides
@@ -626,6 +725,7 @@ ArgoCD auto-discovers `.kdef` files and renders them using kdef.
 | Multi-container | Yes (raw YAML) | Yes (raw YAML) | Yes (explicit `container` blocks) |
 | Import existing | No | No | Yes (`kdef import`) |
 | Secret references | No | No | Yes (`secret()` function) |
+| Sealed secrets | No | No | Yes (`sealedsecret` block + `kdef seal`) |
 | Escape hatch | Patches | Raw YAML | `raw` block (deep-merge) |
 | Learning curve | Low | Moderate | Low |
 
@@ -642,6 +742,7 @@ ArgoCD auto-discovers `.kdef` files and renders them using kdef.
 | K8s-aware | No (generic config) | Yes (K8s schemas) | Yes (K8s templates) | Yes (deployment-centric) |
 | Import existing manifests | Yes (`cue import`) | Yes (`kcl import`) | Yes (convert module) | Yes (`kdef import`) |
 | Secret references | No | No | No | Yes (`secret()` function) |
+| Sealed secrets | No | No | No | Yes (`sealedsecret` block + `kdef seal`) |
 | Multi-container pods | Manual (raw YAML) | Manual (raw YAML) | Manual (raw YAML) | Yes (explicit `container` blocks) |
 | Service/Ingress generation | No (manual) | No (manual) | No (manual) | Yes (nested `service`/`ingress` blocks) |
 | Env overrides | Manual | Manual | Manual | Built-in (`--env` flag) |
@@ -661,6 +762,7 @@ ArgoCD auto-discovers `.kdef` files and renders them using kdef.
 - [HashiCorp HCL](https://github.com/hashicorp/hcl) — parser
 - [Kubernetes API types](https://github.com/kubernetes/api) — typed K8s objects
 - [Cobra](https://github.com/spf13/cobra) — CLI framework
+- [nfpm](https://nfpm.goreleaser.com/) — Linux package builder (deb/rpm/apk)
 
 ## Author
 

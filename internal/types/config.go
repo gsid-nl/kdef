@@ -6,6 +6,7 @@ type KdefConfig struct {
 	Deployments     []DeploymentConfig
 	CronJobs        []CronJobConfig
 	ConfigMaps      []ConfigMapConfig
+	SealedSecrets   []SealedSecretConfig
 	IngressDefaults *IngressDefaults
 }
 

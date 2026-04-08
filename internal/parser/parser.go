@@ -112,6 +112,7 @@ func LoadWithOptions(opts LoadOptions) (*types.KdefConfig, error) {
 		config.CronJobs = append(config.CronJobs, result.CronJobs...)
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
 		config.Deployments = append(config.Deployments, result.Deployments...)
+		config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
 	}
 
 	// Phase 3: apply ingress defaults to all apps
