@@ -25,6 +25,13 @@ func buildEnvVar(e types.EnvEntry) corev1.EnvVar {
 				Key:                  e.SecretKey,
 			},
 		}
+	} else if e.ConfigMapName != "" {
+		envVar.ValueFrom = &corev1.EnvVarSource{
+			ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: e.ConfigMapName},
+				Key:                  e.ConfigMapKey,
+			},
+		}
 	} else {
 		envVar.Value = e.Value
 	}
