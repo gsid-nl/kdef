@@ -60,12 +60,11 @@ func GenerateDeploymentV2(dep types.DeploymentConfig) []Manifest {
 		for _, ef := range ic.EnvFrom {
 			initC.EnvFrom = append(initC.EnvFrom, buildEnvFromSource(ef))
 		}
-		// Init container volume mounts — reference volumes by name from deployment volumes
+		// Init container volume mounts — reference volumes by name from deployment
+		// or container-level volumes
 		for _, volName := range ic.VolumeMounts {
-			for _, v := range dep.Volumes {
-				if v.Name == volName {
-					initC.VolumeMounts = append(initC.VolumeMounts, buildVolumeMount(v))
-				}
+			if v, ok := findVolume(dep, volName); ok {
+				initC.VolumeMounts = append(initC.VolumeMounts, buildVolumeMount(v))
 			}
 		}
 		if ic.SecurityContext != nil {
@@ -311,6 +310,23 @@ func buildContainerV2(c types.ContainerConfig) corev1.Container {
 	}
 
 	return container
+}
+
+// findVolume searches deployment-level volumes first, then container-level volumes.
+func findVolume(dep types.DeploymentConfig, name string) (types.VolumeConfig, bool) {
+	for _, v := range dep.Volumes {
+		if v.Name == name {
+			return v, true
+		}
+	}
+	for _, c := range dep.Containers {
+		for _, v := range c.Volumes {
+			if v.Name == name {
+				return v, true
+			}
+		}
+	}
+	return types.VolumeConfig{}, false
 }
 
 func hasPorts(dep types.DeploymentConfig) bool {
