@@ -152,30 +152,8 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		return nil, diags
 	}
 
-	// Phase 2: parse definition files — root-level first, then local overrides
+	// Phase 2: parse local definition files (root-level defs are parsed once in loadRootProject)
 	skipFiles := map[string]bool{"vars.kdef": true, "root.kdef": true}
-
-	if opts.RootDir != "" && opts.RootDir != opts.Dir {
-		rootEntries, err := os.ReadDir(opts.RootDir)
-		if err != nil {
-			return nil, err
-		}
-		for _, entry := range rootEntries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".kdef") || skipFiles[entry.Name()] {
-				continue
-			}
-			path := filepath.Join(opts.RootDir, entry.Name())
-			result, diags := ParseFile(path, ctx)
-			if diags.HasErrors() {
-				return nil, fmt.Errorf("parse root-level %s: %w", entry.Name(), diags)
-			}
-			config.CronJobs = append(config.CronJobs, result.CronJobs...)
-			config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
-			config.Deployments = append(config.Deployments, result.Deployments...)
-			config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
-			config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
-		}
-	}
 
 	entries, err := os.ReadDir(opts.Dir)
 	if err != nil {
@@ -251,6 +229,19 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	for _, sa := range root.ServiceAccounts {
 		merged.ServiceAccounts = append(merged.ServiceAccounts, sa)
 	}
+
+	// Parse root-level definition files once (configmaps, etc.)
+	// These use the root directory context so file() paths resolve correctly.
+	rootDir := filepath.Dir(rootFile)
+	rootDefs, err := parseRootDefinitionFiles(rootDir, root, opts)
+	if err != nil {
+		return nil, err
+	}
+	merged.CronJobs = append(merged.CronJobs, rootDefs.CronJobs...)
+	merged.ConfigMaps = append(merged.ConfigMaps, rootDefs.ConfigMaps...)
+	merged.Deployments = append(merged.Deployments, rootDefs.Deployments...)
+	merged.SealedSecrets = append(merged.SealedSecrets, rootDefs.SealedSecrets...)
+	merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, rootDefs.PersistentVolumeClaims...)
 
 	for name, entry := range root.Deployments {
 		subDir := filepath.Join(filepath.Dir(rootFile), entry.Path)
@@ -638,6 +629,74 @@ func parseIngressDefaultsBlock(block *hcl.Block) (*types.IngressDefaults, hcl.Di
 	}
 
 	return id, diags
+}
+
+// parseRootDefinitionFiles parses .kdef files in the root directory once,
+// using the root directory as context for file() path resolution.
+// This avoids re-parsing per sub-project and ensures correct paths.
+func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadOptions) (*types.KdefConfig, error) {
+	config := &types.KdefConfig{
+		Variables: make(map[string]types.VariableDecl),
+	}
+
+	// Load root-level vars for the eval context
+	varsFile := filepath.Join(rootDir, "vars.kdef")
+	if _, err := os.Stat(varsFile); err == nil {
+		result, diags := ParseVariableFileWithImports(varsFile)
+		if diags.HasErrors() {
+			return nil, diags
+		}
+		for _, importPath := range result.Imports {
+			importResult, diags := ParseVariableFileWithImports(importPath)
+			if diags.HasErrors() {
+				return nil, diags
+			}
+			for k, v := range importResult.Variables {
+				config.Variables[k] = v
+			}
+		}
+		for k, v := range result.Variables {
+			config.Variables[k] = v
+		}
+	}
+
+	// Scan root-level images
+	images, err := ScanImages(rootDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build eval context with root directory for file() resolution
+	ctx, diags := BuildEvalContext(config.Variables, opts.Overrides, nil, images, rootDir)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+
+	skipFiles := map[string]bool{"vars.kdef": true, "root.kdef": true}
+
+	entries, err := os.ReadDir(rootDir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".kdef") || skipFiles[entry.Name()] {
+			continue
+		}
+
+		path := filepath.Join(rootDir, entry.Name())
+		result, diags := ParseFile(path, ctx)
+		if diags.HasErrors() {
+			return nil, fmt.Errorf("parse root-level %s: %w", entry.Name(), diags)
+		}
+		config.CronJobs = append(config.CronJobs, result.CronJobs...)
+		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
+		config.Deployments = append(config.Deployments, result.Deployments...)
+		config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
+		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
+	}
+
+	return config, nil
 }
 
 // applyIngressDefaults merges ingress defaults into all deployments that have an ingress block.
