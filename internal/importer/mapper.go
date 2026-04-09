@@ -21,9 +21,10 @@ type AppGroup struct {
 
 // ImportResult holds all generated kdef blocks.
 type ImportResult struct {
-	Deployments []string // rendered kdef deployment blocks
-	CronJobs    []string // rendered kdef cronjob blocks
-	ConfigMaps  []string // rendered kdef configmap blocks
+	Deployments            []string // rendered kdef deployment blocks
+	CronJobs               []string // rendered kdef cronjob blocks
+	ConfigMaps             []string // rendered kdef configmap blocks
+	PersistentVolumeClaims []string // rendered kdef persistentvolumeclaim blocks
 }
 
 // MapToKdef converts cluster resources to kdef syntax strings.
@@ -45,6 +46,11 @@ func MapToKdef(resources *ClusterResources) ImportResult {
 	// ConfigMaps
 	for _, cm := range resources.ConfigMaps {
 		result.ConfigMaps = append(result.ConfigMaps, renderConfigMapBlock(cm))
+	}
+
+	// PersistentVolumeClaims
+	for _, pvc := range resources.PersistentVolumeClaims {
+		result.PersistentVolumeClaims = append(result.PersistentVolumeClaims, renderPersistentVolumeClaimBlock(pvc))
 	}
 
 	return result
@@ -559,6 +565,35 @@ func formatDuration(seconds int64) string {
 		return fmt.Sprintf("%dm", seconds/60)
 	}
 	return fmt.Sprintf("%ds", seconds)
+}
+
+func renderPersistentVolumeClaimBlock(pvc corev1.PersistentVolumeClaim) string {
+	var b strings.Builder
+
+	b.WriteString(fmt.Sprintf("persistentvolumeclaim %q {\n", pvc.Name))
+
+	if pvc.Namespace != "" {
+		b.WriteString(fmt.Sprintf("  namespace = %q\n", pvc.Namespace))
+	}
+
+	if pvc.Spec.StorageClassName != nil && *pvc.Spec.StorageClassName != "" {
+		b.WriteString(fmt.Sprintf("  storage_class = %q\n", *pvc.Spec.StorageClassName))
+	}
+
+	if len(pvc.Spec.AccessModes) > 0 {
+		var modes []string
+		for _, m := range pvc.Spec.AccessModes {
+			modes = append(modes, fmt.Sprintf("%q", string(m)))
+		}
+		b.WriteString(fmt.Sprintf("  access_modes  = [%s]\n", strings.Join(modes, ", ")))
+	}
+
+	if storage, ok := pvc.Spec.Resources.Requests[corev1.ResourceStorage]; ok {
+		b.WriteString(fmt.Sprintf("  storage       = %q\n", storage.String()))
+	}
+
+	b.WriteString("}\n")
+	return b.String()
 }
 
 // sortedKeys returns sorted keys of a map.

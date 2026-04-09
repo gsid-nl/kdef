@@ -1,6 +1,6 @@
 images {
-  fos-api  = "reg.gsid.nl/fos-api:0.8.38"
-  fos-cdn  = "reg.gsid.nl/fos-cdn:0.2.13"
-  fos-ui   = "reg.gsid.nl/fos-ui:0.1.45"
-  nginx    = "reg.gsid.nl/nginx:stable"
+  my-api   = "registry.example.com/my-app/api:0.8.38"
+  my-cdn   = "registry.example.com/my-app/cdn:0.2.13"
+  my-ui    = "registry.example.com/my-app/ui:0.1.45"
+  nginx    = "registry.example.com/nginx:stable"
 }

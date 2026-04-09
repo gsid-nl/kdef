@@ -6,7 +6,7 @@ kdef compiles human-readable `.kdef` files into standard Kubernetes YAML manifes
 
 ```hcl
 deployment "api" {
-  namespace        = "acme-app"
+  namespace        = "my-app"
   image_pull_secrets = ["regcred"]
 
   container "api" {
@@ -39,7 +39,7 @@ deployment "api" {
   }
 
   ingress {
-    host = "api.acme.dev"
+    host = "api.example.com"
     tls  = true
   }
 }
@@ -88,7 +88,7 @@ kdef apply --dir k8s/ --dry-run   # preview first
 
 ## Documentation
 
-- [Block Types](docs/block-types.md) — `deployment`, `cronjob`, `configmap`, `sealedsecret`
+- [Block Types](docs/block-types.md) — `root.kdef`, `deployment`, `cronjob`, `configmap`, `sealedsecret`, `persistentvolumeclaim`
 - [Variables](docs/variables.md) — typed variables, imports, ingress defaults, environment overrides
 - [Functions](docs/functions.md) — `image()`, `secret()`, `configmap()`, `file()`
 - [Conditionals and Loops](docs/conditionals-and-loops.md) — `if` blocks, `for` loops, ternary

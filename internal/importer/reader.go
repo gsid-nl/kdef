@@ -46,11 +46,12 @@ func cleanMetadata(obj *metav1.ObjectMeta) {
 
 // ClusterResources holds all resources read from a cluster or file.
 type ClusterResources struct {
-	Deployments []appsv1.Deployment
-	Services    []corev1.Service
-	Ingresses   []networkingv1.Ingress
-	CronJobs    []batchv1.CronJob
-	ConfigMaps  []corev1.ConfigMap
+	Deployments            []appsv1.Deployment
+	Services               []corev1.Service
+	Ingresses              []networkingv1.Ingress
+	CronJobs               []batchv1.CronJob
+	ConfigMaps             []corev1.ConfigMap
+	PersistentVolumeClaims []corev1.PersistentVolumeClaim
 }
 
 // ReadFromCluster reads resources from the current kubectl context.
@@ -126,6 +127,19 @@ func ReadFromCluster(namespace string) (*ClusterResources, error) {
 		resources.ConfigMaps = append(resources.ConfigMaps, cm)
 	}
 
+	// PersistentVolumeClaims
+	pvcs, err := kubectlGet("persistentvolumeclaims", namespace)
+	if err != nil {
+		return nil, fmt.Errorf("get persistentvolumeclaims: %w", err)
+	}
+	for _, raw := range pvcs {
+		var pvc corev1.PersistentVolumeClaim
+		if err := json.Unmarshal(raw, &pvc); err != nil {
+			return nil, fmt.Errorf("unmarshal persistentvolumeclaim: %w", err)
+		}
+		resources.PersistentVolumeClaims = append(resources.PersistentVolumeClaims, pvc)
+	}
+
 	cleanAllResources(resources)
 	return resources, nil
 }
@@ -183,6 +197,11 @@ func ReadFromFile(filename string) (*ClusterResources, error) {
 			var cm corev1.ConfigMap
 			if err := json.Unmarshal(jsonData, &cm); err == nil {
 				resources.ConfigMaps = append(resources.ConfigMaps, cm)
+			}
+		case "PersistentVolumeClaim":
+			var pvc corev1.PersistentVolumeClaim
+			if err := json.Unmarshal(jsonData, &pvc); err == nil {
+				resources.PersistentVolumeClaims = append(resources.PersistentVolumeClaims, pvc)
 			}
 		}
 	}
@@ -266,5 +285,8 @@ func cleanAllResources(r *ClusterResources) {
 	}
 	for i := range r.ConfigMaps {
 		cleanMetadata(&r.ConfigMaps[i].ObjectMeta)
+	}
+	for i := range r.PersistentVolumeClaims {
+		cleanMetadata(&r.PersistentVolumeClaims[i].ObjectMeta)
 	}
 }

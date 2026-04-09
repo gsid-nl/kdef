@@ -44,10 +44,10 @@ repoServer:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: timepickr
+  name: my-app
 spec:
   source:
-    repoURL: https://github.com/gsid-nl/timepickr-k8s.git
+    repoURL: https://github.com/example/my-app-k8s.git
     path: k8s/
     plugin:
       name: kdef

@@ -1,4 +1,4 @@
-VERSION ?= 0.2.8
+VERSION ?= 0.3.0
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "nogit")
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -s -w \
@@ -9,7 +9,7 @@ LDFLAGS := -s -w \
 DIST    := dist
 NFPM    := $(shell go env GOPATH)/bin/nfpm
 
-.PHONY: build test clean build-all completions package
+.PHONY: build test clean build-all completions package argocd-plugin
 
 build:
 	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -trimpath -o kdef ./cmd/kdef
@@ -36,6 +36,9 @@ completions: build
 	./kdef completion bash > completions/kdef.bash
 	./kdef completion zsh  > completions/kdef.zsh
 	./kdef completion fish > completions/kdef.fish
+
+argocd-plugin: build-all
+	cp $(DIST)/kdef-linux-amd64 argocd-plugin/kdef
 
 package: build-all completions
 	@# Generate resolved nfpm configs per arch, then build packages

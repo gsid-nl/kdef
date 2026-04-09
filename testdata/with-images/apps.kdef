@@ -1,8 +1,8 @@
-deployment "fos-api" {
-  namespace = "fos"
+deployment "my-api" {
+  namespace = "my-app"
 
   container "api" {
-    image       = image("fos-api")
+    image       = image("my-api")
     working_dir = "/app"
 
     env {
@@ -27,11 +27,11 @@ deployment "fos-api" {
   }
 }
 
-deployment "fos-cdn" {
-  namespace = "fos"
+deployment "my-cdn" {
+  namespace = "my-app"
 
   container "cdn" {
-    image = image("fos-cdn")
+    image = image("my-cdn")
 
     port "3000" "http" {
       health = "/health"

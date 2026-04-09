@@ -9,12 +9,12 @@ import (
 
 func fullDeployment() types.DeploymentConfig {
 	return types.DeploymentConfig{
-		Name:     "timepickr-api",
+		Name:     "my-api",
 		Replicas: 3,
 		Containers: []types.ContainerConfig{
 			{
 				Name:  "api",
-				Image: "registry.gsid.nl/timepickr/api:v2.4.1",
+				Image: "registry.example.com/my-app/api:v2.4.1",
 				Ports: []types.PortConfig{
 					{Number: 8080, Name: "http", Health: "/health", Ready: "/ready"},
 				},
@@ -36,7 +36,7 @@ func fullDeployment() types.DeploymentConfig {
 			},
 		},
 		Ingress: &types.IngressConfig{
-			Host: "api.timepickr.net",
+			Host: "api.example.com",
 			TLS:  true,
 		},
 	}
@@ -69,8 +69,62 @@ func TestGenerateDeploymentV2(t *testing.T) {
 	if !strings.Contains(yaml, "replicas: 3") {
 		t.Error("yaml missing replicas: 3")
 	}
-	if !strings.Contains(yaml, "registry.gsid.nl/timepickr/api:v2.4.1") {
+	if !strings.Contains(yaml, "registry.example.com/my-app/api:v2.4.1") {
 		t.Error("yaml missing image")
+	}
+}
+
+func TestGeneratePersistentVolumeClaim(t *testing.T) {
+	pvc := types.PersistentVolumeClaimConfig{
+		Name:         "app-data",
+		Namespace:    "production",
+		StorageClass: "gp3",
+		AccessModes:  []string{"ReadWriteOnce"},
+		Storage:      "10Gi",
+	}
+
+	result := GeneratePersistentVolumeClaim(pvc)
+
+	yamlBytes, err := RenderYAML([]Manifest{{Object: result}})
+	if err != nil {
+		t.Fatalf("render error: %v", err)
+	}
+
+	yaml := string(yamlBytes)
+
+	if !strings.Contains(yaml, "kind: PersistentVolumeClaim") {
+		t.Error("yaml missing PersistentVolumeClaim kind")
+	}
+	if !strings.Contains(yaml, "name: app-data") {
+		t.Error("yaml missing name")
+	}
+	if !strings.Contains(yaml, "namespace: production") {
+		t.Error("yaml missing namespace")
+	}
+	if !strings.Contains(yaml, "gp3") {
+		t.Error("yaml missing storage class")
+	}
+	if !strings.Contains(yaml, "ReadWriteOnce") {
+		t.Error("yaml missing access mode")
+	}
+	if !strings.Contains(yaml, "10Gi") {
+		t.Error("yaml missing storage size")
+	}
+}
+
+func TestGeneratePersistentVolumeClaimDefaults(t *testing.T) {
+	pvc := types.PersistentVolumeClaimConfig{
+		Name:    "minimal",
+		Storage: "5Gi",
+	}
+
+	result := GeneratePersistentVolumeClaim(pvc)
+
+	if len(result.Spec.AccessModes) != 1 || result.Spec.AccessModes[0] != "ReadWriteOnce" {
+		t.Errorf("expected default access mode ReadWriteOnce, got %v", result.Spec.AccessModes)
+	}
+	if result.Spec.StorageClassName != nil {
+		t.Error("storage class should be nil when not specified")
 	}
 }
 

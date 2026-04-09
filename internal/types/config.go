@@ -5,9 +5,10 @@ type KdefConfig struct {
 	Variables       map[string]VariableDecl
 	Deployments     []DeploymentConfig
 	CronJobs        []CronJobConfig
-	ConfigMaps      []ConfigMapConfig
-	SealedSecrets   []SealedSecretConfig
-	IngressDefaults *IngressDefaults
+	ConfigMaps              []ConfigMapConfig
+	SealedSecrets           []SealedSecretConfig
+	PersistentVolumeClaims  []PersistentVolumeClaimConfig
+	IngressDefaults         *IngressDefaults
 }
 
 // IngressDefaults defines shared settings inherited by all ingress blocks.

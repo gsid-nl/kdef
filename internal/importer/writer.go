@@ -43,6 +43,16 @@ func WriteKdefFiles(result ImportResult, outputDir string) error {
 		fmt.Printf("wrote %s\n", path)
 	}
 
+	// Write PVCs — all in one file
+	if len(result.PersistentVolumeClaims) > 0 {
+		content := strings.Join(result.PersistentVolumeClaims, "\n")
+		path := filepath.Join(outputDir, "pvcs.kdef")
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			return fmt.Errorf("write pvcs.kdef: %w", err)
+		}
+		fmt.Printf("wrote %s\n", path)
+	}
+
 	return nil
 }
 
@@ -61,6 +71,10 @@ func PrintKdef(result ImportResult) {
 		fmt.Print(block)
 	}
 	for _, block := range result.ConfigMaps {
+		fmt.Println()
+		fmt.Print(block)
+	}
+	for _, block := range result.PersistentVolumeClaims {
 		fmt.Println()
 		fmt.Print(block)
 	}
