@@ -16,6 +16,7 @@ import (
 // LoadOptions configures how Load processes .kdef files.
 type LoadOptions struct {
 	Dir        string
+	RootDir    string            // root project directory (set when loading sub-projects)
 	Overrides  map[string]string // from --set flags
 	ValuesFile string            // from --values flag (JSON file)
 	Env        string            // from --env flag (loads environments/<env>.kdef)
@@ -46,7 +47,33 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		Variables: make(map[string]types.VariableDecl),
 	}
 
-	// Phase 1: parse vars.kdef (with imports)
+	// Phase 0: load root-level vars.kdef as base (lowest precedence)
+	if opts.RootDir != "" && opts.RootDir != opts.Dir {
+		rootVarsFile := filepath.Join(opts.RootDir, "vars.kdef")
+		if _, err := os.Stat(rootVarsFile); err == nil {
+			result, diags := ParseVariableFileWithImports(rootVarsFile)
+			if diags.HasErrors() {
+				return nil, diags
+			}
+			for _, importPath := range result.Imports {
+				importResult, diags := ParseVariableFileWithImports(importPath)
+				if diags.HasErrors() {
+					return nil, diags
+				}
+				for k, v := range importResult.Variables {
+					config.Variables[k] = v
+				}
+			}
+			for k, v := range result.Variables {
+				config.Variables[k] = v
+			}
+			if result.IngressDefaults != nil {
+				config.IngressDefaults = result.IngressDefaults
+			}
+		}
+	}
+
+	// Phase 1: parse local vars.kdef (overrides root-level)
 	varsFile := filepath.Join(opts.Dir, "vars.kdef")
 	if _, err := os.Stat(varsFile); err == nil {
 		result, diags := ParseVariableFileWithImports(varsFile)
@@ -100,10 +127,23 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		}
 	}
 
-	// Pre-scan for images {} blocks across all .kdef files
-	images, err := ScanImages(opts.Dir)
+	// Pre-scan for images: root-level first, then local overrides
+	images := make(map[string]string)
+	if opts.RootDir != "" && opts.RootDir != opts.Dir {
+		rootImages, err := ScanImages(opts.RootDir)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range rootImages {
+			images[k] = v
+		}
+	}
+	localImages, err := ScanImages(opts.Dir)
 	if err != nil {
 		return nil, err
+	}
+	for k, v := range localImages {
+		images[k] = v
 	}
 
 	// Build EvalContext
@@ -112,20 +152,38 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		return nil, diags
 	}
 
-	// Phase 2: find and parse all definition files (everything except vars.kdef)
+	// Phase 2: parse definition files — root-level first, then local overrides
+	skipFiles := map[string]bool{"vars.kdef": true, "root.kdef": true}
+
+	if opts.RootDir != "" && opts.RootDir != opts.Dir {
+		rootEntries, err := os.ReadDir(opts.RootDir)
+		if err != nil {
+			return nil, err
+		}
+		for _, entry := range rootEntries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".kdef") || skipFiles[entry.Name()] {
+				continue
+			}
+			path := filepath.Join(opts.RootDir, entry.Name())
+			result, diags := ParseFile(path, ctx)
+			if diags.HasErrors() {
+				return nil, fmt.Errorf("parse root-level %s: %w", entry.Name(), diags)
+			}
+			config.CronJobs = append(config.CronJobs, result.CronJobs...)
+			config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
+			config.Deployments = append(config.Deployments, result.Deployments...)
+			config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
+			config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
+		}
+	}
+
 	entries, err := os.ReadDir(opts.Dir)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		if !strings.HasSuffix(entry.Name(), ".kdef") {
-			continue
-		}
-		if entry.Name() == "vars.kdef" {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".kdef") || skipFiles[entry.Name()] {
 			continue
 		}
 
@@ -155,11 +213,8 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 				return nil, diags
 			}
 
-			// If env file has var overrides, we need to re-parse with those vars
-			// For now, just apply the structural overrides
 			ApplyOverrides(config, overrideResult)
 
-			// Merge var overrides into the set flags for reference
 			for k, v := range overrideResult.VarOverrides {
 				if opts.Overrides == nil {
 					opts.Overrides = make(map[string]string)
@@ -226,6 +281,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 
 		subOpts := LoadOptions{
 			Dir:        subDir,
+			RootDir:    filepath.Dir(rootFile),
 			Overrides:  overrides,
 			ValuesFile: opts.ValuesFile,
 			Env:        env,
