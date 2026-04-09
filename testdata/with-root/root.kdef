@@ -1,4 +1,18 @@
-deployments = [
-  "app1",
-  "app2",
-]
+namespaces = ["production"]
+
+service_account "default" {
+  image_pull_secrets = ["registrykey"]
+}
+
+deployments = {
+  "frontend" = {
+    path            = "app1"
+    namespace       = "production"
+    service_account = "default"
+  }
+  "backend" = {
+    path            = "app2"
+    namespace       = "production"
+    service_account = "default"
+  }
+}
