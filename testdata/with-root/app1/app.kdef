@@ -1,0 +1,6 @@
+deployment "frontend" {
+  container "frontend" {
+    image = "nginx:latest"
+  }
+  service {}
+}

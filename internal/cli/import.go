@@ -16,13 +16,13 @@ and generates .kdef configuration files.
 
 Examples:
   # Import from live cluster
-  kdef import --namespace timepickr --output-dir k8s/
+  kdef import --namespace my-app --output-dir k8s/
 
   # Import from YAML file
   kdef import --from-file manifests.yaml
 
   # Preview without writing files
-  kdef import --namespace timepickr`,
+  kdef import --namespace my-app`,
 	RunE: runImport,
 }
 
@@ -58,14 +58,14 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 	result := importer.MapToKdef(resources)
 
-	total := len(result.Deployments) + len(result.CronJobs) + len(result.ConfigMaps)
+	total := len(result.Deployments) + len(result.CronJobs) + len(result.ConfigMaps) + len(result.PersistentVolumeClaims)
 	if total == 0 {
 		fmt.Fprintln(cmd.ErrOrStderr(), "no resources found to import")
 		return nil
 	}
 
-	fmt.Fprintf(cmd.ErrOrStderr(), "found %d deployment(s), %d cronjob(s), %d configmap(s)\n",
-		len(result.Deployments), len(result.CronJobs), len(result.ConfigMaps))
+	fmt.Fprintf(cmd.ErrOrStderr(), "found %d deployment(s), %d cronjob(s), %d configmap(s), %d pvc(s)\n",
+		len(result.Deployments), len(result.CronJobs), len(result.ConfigMaps), len(result.PersistentVolumeClaims))
 
 	if importOutputDir != "" {
 		return importer.WriteKdefFiles(result, importOutputDir)

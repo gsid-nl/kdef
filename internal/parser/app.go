@@ -35,10 +35,11 @@ func ParseBytes(src []byte, filename string, ctx *hcl.EvalContext) (FileResult, 
 
 // FileResult holds all parsed blocks from a single file.
 type FileResult struct {
-	Deployments   []types.DeploymentConfig
-	CronJobs      []types.CronJobConfig
-	ConfigMaps    []types.ConfigMapConfig
-	SealedSecrets []types.SealedSecretConfig
+	Deployments            []types.DeploymentConfig
+	CronJobs               []types.CronJobConfig
+	ConfigMaps             []types.ConfigMapConfig
+	SealedSecrets          []types.SealedSecretConfig
+	PersistentVolumeClaims []types.PersistentVolumeClaimConfig
 }
 
 func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnostics) {
@@ -54,6 +55,7 @@ func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnos
 		result.ConfigMaps = append(result.ConfigMaps, fr.ConfigMaps...)
 		result.Deployments = append(result.Deployments, fr.Deployments...)
 		result.SealedSecrets = append(result.SealedSecrets, fr.SealedSecrets...)
+		result.PersistentVolumeClaims = append(result.PersistentVolumeClaims, fr.PersistentVolumeClaims...)
 	}
 
 	// Pre-processing: extract and evaluate "if" blocks
@@ -80,6 +82,7 @@ var topLevelSchema = &hcl.BodySchema{
 		{Type: "cronjob", LabelNames: []string{"name"}},
 		{Type: "configmap", LabelNames: []string{"name"}},
 		{Type: "sealedsecret", LabelNames: []string{"name"}},
+		{Type: "persistentvolumeclaim", LabelNames: []string{"name"}},
 		{Type: "images"},
 	},
 }
@@ -115,6 +118,12 @@ func parseBlocksFromBody(body hcl.Body, ctx *hcl.EvalContext, result *FileResult
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				result.SealedSecrets = append(result.SealedSecrets, ss)
+			}
+		case "persistentvolumeclaim":
+			pvc, moreDiags := parsePersistentVolumeClaimBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.PersistentVolumeClaims = append(result.PersistentVolumeClaims, pvc)
 			}
 		}
 	}

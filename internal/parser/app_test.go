@@ -22,12 +22,12 @@ func testEvalContext() *hcl.EvalContext {
 
 func TestParseDeploymentBlock(t *testing.T) {
 	src := `
-deployment "timepickr-api" {
-  namespace        = "timepickr"
+deployment "my-api" {
+  namespace        = "my-app"
   image_pull_secrets = ["regcred"]
 
   container "api" {
-    image = "registry.gsid.nl/timepickr/api:${var.image_tag}"
+    image = "registry.example.com/my-app/api:${var.image_tag}"
     image_pull_policy = "Always"
 
     port "8080" "http" {
@@ -53,7 +53,7 @@ deployment "timepickr-api" {
   service {}
 
   ingress {
-    host = "api.timepickr.net"
+    host = "api.example.com"
     tls  = true
   }
 }
@@ -75,11 +75,11 @@ deployment "timepickr-api" {
 
 	dep := result.Deployments[0]
 
-	if dep.Name != "timepickr-api" {
-		t.Errorf("name: expected 'timepickr-api', got %q", dep.Name)
+	if dep.Name != "my-api" {
+		t.Errorf("name: expected 'my-api', got %q", dep.Name)
 	}
-	if dep.Namespace != "timepickr" {
-		t.Errorf("namespace: expected 'timepickr', got %q", dep.Namespace)
+	if dep.Namespace != "my-app" {
+		t.Errorf("namespace: expected 'my-app', got %q", dep.Namespace)
 	}
 	if dep.Replicas != 3 {
 		t.Errorf("replicas: expected 3, got %d", dep.Replicas)
@@ -89,7 +89,7 @@ deployment "timepickr-api" {
 	}
 
 	c := dep.Containers[0]
-	if c.Image != "registry.gsid.nl/timepickr/api:v2.4.1" {
+	if c.Image != "registry.example.com/my-app/api:v2.4.1" {
 		t.Errorf("image: expected interpolated tag v2.4.1, got %q", c.Image)
 	}
 	if len(c.Ports) != 1 || c.Ports[0].Number != 8080 {
@@ -109,8 +109,8 @@ deployment "timepickr-api" {
 	if dep.Ingress == nil {
 		t.Fatal("ingress: expected non-nil")
 	}
-	if dep.Ingress.Host != "api.timepickr.net" {
-		t.Errorf("ingress host: expected 'api.timepickr.net', got %q", dep.Ingress.Host)
+	if dep.Ingress.Host != "api.example.com" {
+		t.Errorf("ingress host: expected 'api.example.com', got %q", dep.Ingress.Host)
 	}
 }
 
@@ -156,7 +156,7 @@ func TestParseCronJob(t *testing.T) {
 	src := `
 cronjob "send-reminders" {
   schedule    = "*/5 * * * *"
-  image       = "registry.gsid.nl/timepickr/api:latest"
+  image       = "registry.example.com/my-app/api:latest"
   command     = ["php", "bin/console", "app:send-reminders"]
   concurrency = "Forbid"
   deadline    = "4m"
@@ -220,6 +220,84 @@ cronjob "cleanup" {
 	}
 	if len(result.CronJobs) != 1 {
 		t.Errorf("cronjobs: expected 1, got %d", len(result.CronJobs))
+	}
+}
+
+func TestParsePersistentVolumeClaimBlock(t *testing.T) {
+	src := `
+persistentvolumeclaim "app-data" {
+  namespace     = "production"
+  storage_class = "gp3"
+  access_modes  = ["ReadWriteOnce"]
+  storage       = "10Gi"
+}
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pvc.kdef")
+	if err := os.WriteFile(path, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, diags := ParseFile(path, &hcl.EvalContext{})
+	if diags.HasErrors() {
+		t.Fatalf("unexpected errors: %s", diags.Error())
+	}
+
+	if len(result.PersistentVolumeClaims) != 1 {
+		t.Fatalf("expected 1 PVC, got %d", len(result.PersistentVolumeClaims))
+	}
+
+	pvc := result.PersistentVolumeClaims[0]
+	if pvc.Name != "app-data" {
+		t.Errorf("name = %q, want %q", pvc.Name, "app-data")
+	}
+	if pvc.Namespace != "production" {
+		t.Errorf("namespace = %q, want %q", pvc.Namespace, "production")
+	}
+	if pvc.StorageClass != "gp3" {
+		t.Errorf("storage_class = %q, want %q", pvc.StorageClass, "gp3")
+	}
+	if len(pvc.AccessModes) != 1 || pvc.AccessModes[0] != "ReadWriteOnce" {
+		t.Errorf("access_modes = %v, want [ReadWriteOnce]", pvc.AccessModes)
+	}
+	if pvc.Storage != "10Gi" {
+		t.Errorf("storage = %q, want %q", pvc.Storage, "10Gi")
+	}
+}
+
+func TestParsePersistentVolumeClaimDefaults(t *testing.T) {
+	src := `
+persistentvolumeclaim "minimal" {
+  storage = "5Gi"
+}
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pvc.kdef")
+	if err := os.WriteFile(path, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, diags := ParseFile(path, &hcl.EvalContext{})
+	if diags.HasErrors() {
+		t.Fatalf("unexpected errors: %s", diags.Error())
+	}
+
+	if len(result.PersistentVolumeClaims) != 1 {
+		t.Fatalf("expected 1 PVC, got %d", len(result.PersistentVolumeClaims))
+	}
+
+	pvc := result.PersistentVolumeClaims[0]
+	if pvc.Name != "minimal" {
+		t.Errorf("name = %q, want %q", pvc.Name, "minimal")
+	}
+	if pvc.StorageClass != "" {
+		t.Errorf("storage_class should be empty, got %q", pvc.StorageClass)
+	}
+	if len(pvc.AccessModes) != 0 {
+		t.Errorf("access_modes should be empty, got %v", pvc.AccessModes)
+	}
+	if pvc.Storage != "5Gi" {
+		t.Errorf("storage = %q, want %q", pvc.Storage, "5Gi")
 	}
 }
 
