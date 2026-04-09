@@ -1,0 +1,11 @@
+configmap "backend-config" {
+  data = {
+    "KEY" = "value"
+  }
+}
+
+deployment "backend" {
+  container "backend" {
+    image = "redis:latest"
+  }
+}

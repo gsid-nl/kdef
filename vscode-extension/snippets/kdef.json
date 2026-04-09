@@ -195,6 +195,51 @@
       "}"
     ]
   },
+  "Sealed Secret": {
+    "prefix": "sealedsecret",
+    "description": "Create a sealed secret block",
+    "body": [
+      "sealedsecret \"${1:name}\" {",
+      "  namespace = \"${2:default}\"",
+      "  type      = \"${3:Opaque}\"",
+      "",
+      "  data = {",
+      "    ${4:KEY} = \"${5:encrypted-value}\"",
+      "  }",
+      "}"
+    ]
+  },
+  "Persistent Volume Claim": {
+    "prefix": "persistentvolumeclaim",
+    "description": "Create a persistent volume claim block",
+    "body": [
+      "persistentvolumeclaim \"${1:name}\" {",
+      "  namespace     = \"${2:default}\"",
+      "  storage_class = \"${3:gp3}\"",
+      "  access_modes  = [\"${4:ReadWriteOnce}\"]",
+      "  storage       = \"${5:10Gi}\"",
+      "}"
+    ]
+  },
+  "Persistent Volume Claim (minimal)": {
+    "prefix": "pvc",
+    "description": "Create a minimal persistent volume claim",
+    "body": [
+      "persistentvolumeclaim \"${1:name}\" {",
+      "  storage = \"${2:10Gi}\"",
+      "}"
+    ]
+  },
+  "Root Deployments": {
+    "prefix": "root",
+    "description": "Create a root.kdef deployments list",
+    "body": [
+      "deployments = [",
+      "  \"${1:app1}\",",
+      "  \"${2:app2}\",",
+      "]"
+    ]
+  },
   "Variable": {
     "prefix": "variable",
     "description": "Declare a variable",
@@ -263,6 +308,16 @@
       "  mount_path = \"${2:/etc/secret}\"",
       "  secret     = \"${3:$1}\"",
       "  read_only  = true",
+      "}"
+    ]
+  },
+  "Volume - PVC": {
+    "prefix": "volume-pvc",
+    "description": "Add a PVC volume mount",
+    "body": [
+      "volume \"${1:name}\" {",
+      "  mount_path = \"${2:/data}\"",
+      "  pvc        = \"${3:$1}\"",
       "}"
     ]
   },

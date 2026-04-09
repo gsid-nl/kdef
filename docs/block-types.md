@@ -1,5 +1,46 @@
 # Block Types
 
+## `root.kdef` — Multi-Project Root
+
+When managing multiple apps from a single repository, create a `root.kdef` in the root directory that lists subdirectories to load. Each subdirectory is treated as an independent kdef project (with its own `vars.kdef`, environments, etc.).
+
+```hcl
+# root.kdef
+deployments = [
+  "app1",
+  "app2",
+  "apps/app3",
+]
+```
+
+```
+repo/
+  root.kdef
+  app1/
+    vars.kdef
+    app.kdef
+  app2/
+    vars.kdef
+    app.kdef
+    configs/
+  apps/
+    app3/
+      app.kdef
+```
+
+All CLI commands work transparently:
+
+```bash
+kdef render --dir repo              # renders all apps
+kdef validate --dir repo            # validates all apps
+kdef diff --dir repo --env staging  # diffs all apps against cluster
+kdef apply --dir repo --env prod    # applies all apps
+```
+
+CLI flags (`--set`, `--env`, `--values`, `--vars-from`) are passed through to each sub-project. Subdirectories can also contain their own `root.kdef` for nested multi-project structures.
+
+---
+
 ## `deployment` — Kubernetes Deployment
 
 The primary block type. Defines a Deployment with explicit containers, optional Service, and optional Ingress.
@@ -312,6 +353,50 @@ deployment "api" {
     env {
       DATABASE_URL = secret("db-credentials", "DATABASE_URL")
     }
+  }
+}
+```
+
+## `persistentvolumeclaim` — Persistent Volume Claim
+
+Define PersistentVolumeClaims to request storage from the cluster.
+
+```hcl
+persistentvolumeclaim "app-data" {
+  namespace     = "production"
+  storage_class = "gp3"
+  access_modes  = ["ReadWriteOnce"]
+  storage       = "10Gi"
+}
+```
+
+| Attribute       | Required | Description                                                    |
+|-----------------|----------|----------------------------------------------------------------|
+| `namespace`     | no       | Kubernetes namespace                                           |
+| `storage_class` | no       | StorageClass name (omit to use cluster default)                |
+| `access_modes`  | no       | List of access modes (default: `["ReadWriteOnce"]`)            |
+| `storage`       | **yes**  | Storage size, e.g. `"5Gi"`, `"500Mi"`                         |
+
+Valid access modes: `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany`, `ReadWriteOncePod`.
+
+Pairs naturally with `pvc` volume references in deployments:
+
+```hcl
+persistentvolumeclaim "app-data" {
+  namespace     = "production"
+  storage_class = "gp3"
+  storage       = "10Gi"
+}
+
+deployment "api" {
+  namespace = "production"
+  container "api" {
+    image = image("api")
+  }
+
+  volume "data" {
+    mount_path = "/data"
+    pvc        = "app-data"
   }
 }
 ```

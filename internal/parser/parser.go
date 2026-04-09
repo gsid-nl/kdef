@@ -1,10 +1,13 @@
 package parser
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/gsid-nl/kdef/internal/types"
@@ -25,7 +28,20 @@ func Load(dir string, overrides map[string]string) (*types.KdefConfig, error) {
 }
 
 // LoadWithOptions parses all .kdef files using the given options.
+// If the directory contains a root.kdef with a deployments list,
+// each listed subdirectory is loaded as an independent project and
+// all results are merged.
 func LoadWithOptions(opts LoadOptions) (*types.KdefConfig, error) {
+	// Check for root.kdef — multi-project mode
+	rootFile := filepath.Join(opts.Dir, "root.kdef")
+	if _, err := os.Stat(rootFile); err == nil {
+		return loadRootProject(rootFile, opts)
+	}
+
+	return loadSingleProject(opts)
+}
+
+func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 	config := &types.KdefConfig{
 		Variables: make(map[string]types.VariableDecl),
 	}
@@ -122,6 +138,7 @@ func LoadWithOptions(opts LoadOptions) (*types.KdefConfig, error) {
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
 		config.Deployments = append(config.Deployments, result.Deployments...)
 		config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
+		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
 	}
 
 	// Phase 3: apply ingress defaults to all apps
@@ -155,6 +172,84 @@ func LoadWithOptions(opts LoadOptions) (*types.KdefConfig, error) {
 	}
 
 	return config, nil
+}
+
+// loadRootProject parses a root.kdef file and loads each listed subdirectory
+// as an independent kdef project, merging all results into a single KdefConfig.
+func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, error) {
+	dirs, err := parseRootFile(rootFile)
+	if err != nil {
+		return nil, fmt.Errorf("parse root.kdef: %w", err)
+	}
+
+	if len(dirs) == 0 {
+		return nil, fmt.Errorf("root.kdef contains no deployments")
+	}
+
+	merged := &types.KdefConfig{
+		Variables: make(map[string]types.VariableDecl),
+	}
+
+	for _, dir := range dirs {
+		subDir := filepath.Join(opts.Dir, dir)
+		if _, err := os.Stat(subDir); err != nil {
+			return nil, fmt.Errorf("deployment directory %q not found: %w", dir, err)
+		}
+
+		subOpts := LoadOptions{
+			Dir:        subDir,
+			Overrides:  opts.Overrides,
+			ValuesFile: opts.ValuesFile,
+			Env:        opts.Env,
+			VarsFrom:   opts.VarsFrom,
+		}
+
+		config, err := LoadWithOptions(subOpts)
+		if err != nil {
+			return nil, fmt.Errorf("load %q: %w", dir, err)
+		}
+
+		merged.Deployments = append(merged.Deployments, config.Deployments...)
+		merged.CronJobs = append(merged.CronJobs, config.CronJobs...)
+		merged.ConfigMaps = append(merged.ConfigMaps, config.ConfigMaps...)
+		merged.SealedSecrets = append(merged.SealedSecrets, config.SealedSecrets...)
+		merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, config.PersistentVolumeClaims...)
+	}
+
+	return merged, nil
+}
+
+// parseRootFile parses a root.kdef file and returns the list of deployment directories.
+func parseRootFile(filename string) ([]string, error) {
+	parser := hclparse.NewParser()
+	file, diags := parser.ParseHCLFile(filename)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+
+	schema := &hcl.BodySchema{
+		Attributes: []hcl.AttributeSchema{
+			{Name: "deployments", Required: true},
+		},
+	}
+
+	content, diags := file.Body.Content(schema)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+
+	val, diags := content.Attributes["deployments"].Expr.Value(nil)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+
+	var dirs []string
+	for it := val.ElementIterator(); it.Next(); {
+		_, v := it.Element()
+		dirs = append(dirs, v.AsString())
+	}
+
+	return dirs, nil
 }
 
 // applyIngressDefaults merges ingress defaults into all deployments that have an ingress block.
