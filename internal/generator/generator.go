@@ -30,5 +30,8 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 	for _, ss := range config.SealedSecrets {
 		result["sealedsecret-"+ss.Name] = []Manifest{{Object: GenerateSealedSecret(ss)}}
 	}
+	for _, pvc := range config.PersistentVolumeClaims {
+		result["pvc-"+pvc.Name] = []Manifest{{Object: GeneratePersistentVolumeClaim(pvc)}}
+	}
 	return result
 }

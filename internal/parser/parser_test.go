@@ -31,6 +31,36 @@ func TestLoadSimple(t *testing.T) {
 	}
 }
 
+func TestLoadRootKdef(t *testing.T) {
+	dir := filepath.Join(projectRoot(), "testdata", "with-root")
+	config, err := Load(dir, nil)
+	if err != nil {
+		t.Fatalf("load error: %v", err)
+	}
+
+	if len(config.Deployments) != 2 {
+		t.Fatalf("expected 2 deployments, got %d", len(config.Deployments))
+	}
+
+	names := map[string]bool{}
+	for _, dep := range config.Deployments {
+		names[dep.Name] = true
+	}
+	if !names["frontend"] {
+		t.Error("missing deployment: frontend")
+	}
+	if !names["backend"] {
+		t.Error("missing deployment: backend")
+	}
+
+	if len(config.ConfigMaps) != 1 {
+		t.Fatalf("expected 1 configmap, got %d", len(config.ConfigMaps))
+	}
+	if config.ConfigMaps[0].Name != "backend-config" {
+		t.Errorf("configmap name = %q, want %q", config.ConfigMaps[0].Name, "backend-config")
+	}
+}
+
 func TestLoadWithOverrides(t *testing.T) {
 	dir := filepath.Join(projectRoot(), "testdata", "with-ingress")
 	overrides := map[string]string{"image_tag": "v1.0.0"}
