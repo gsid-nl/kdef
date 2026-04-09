@@ -8,6 +8,8 @@ type KdefConfig struct {
 	ConfigMaps              []ConfigMapConfig
 	SealedSecrets           []SealedSecretConfig
 	PersistentVolumeClaims  []PersistentVolumeClaimConfig
+	Namespaces              []string
+	ServiceAccounts         []ServiceAccountConfig
 	IngressDefaults         *IngressDefaults
 }
 
