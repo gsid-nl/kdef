@@ -53,14 +53,14 @@
         },
         {
           "comment": "Nested block types",
-          "match": "^\\s*(container|init|service|ingress|scale|resources|env|env_from|volume|security_context|autoscale|ingress_defaults|override|use_vars|annotations|port|data)\\b",
+          "match": "^\\s*(container|init|service|ingress|scale|resources|env|env_from|volume|security_context|autoscale|ingress_defaults|service_account|override|use_vars|annotations|port|data)\\b",
           "captures": {
             "1": { "name": "keyword.other.block.kdef" }
           }
         },
         {
           "comment": "Block labels (quoted strings after block type)",
-          "match": "(?<=deployment|cronjob|configmap|sealedsecret|persistentvolumeclaim|container|init|volume|port|variable|for|override)\\s+(\"[^\"]*\")",
+          "match": "(?<=deployment|cronjob|configmap|sealedsecret|persistentvolumeclaim|container|init|volume|port|variable|for|override|service_account)\\s+(\"[^\"]*\")",
           "captures": {
             "1": { "name": "entity.name.type.kdef" }
           }
