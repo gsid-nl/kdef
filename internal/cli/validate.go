@@ -65,8 +65,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	total := len(config.Deployments) + len(config.CronJobs) + len(config.ConfigMaps) + len(config.PersistentVolumeClaims)
-	fmt.Fprintf(cmd.OutOrStdout(), "valid: %d deployment(s), %d cronjob(s), %d configmap(s), %d pvc(s) in %s\n",
-		len(config.Deployments), len(config.CronJobs), len(config.ConfigMaps), len(config.PersistentVolumeClaims), validateDir)
+	fmt.Fprintf(cmd.OutOrStdout(), "valid: %d namespace(s), %d service_account(s), %d deployment(s), %d cronjob(s), %d configmap(s), %d pvc(s) in %s\n",
+		len(config.Namespaces), len(config.ServiceAccounts), len(config.Deployments), len(config.CronJobs), len(config.ConfigMaps), len(config.PersistentVolumeClaims), validateDir)
 	_ = total
 	return nil
 }

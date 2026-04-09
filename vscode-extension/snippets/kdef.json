@@ -230,14 +230,32 @@
       "}"
     ]
   },
-  "Root Deployments": {
+  "Root Config": {
     "prefix": "root",
-    "description": "Create a root.kdef deployments list",
+    "description": "Create a root.kdef configuration",
     "body": [
-      "deployments = [",
-      "  \"${1:app1}\",",
-      "  \"${2:app2}\",",
-      "]"
+      "namespaces = [\"${1:production}\"]",
+      "",
+      "service_account \"${2:default}\" {",
+      "  image_pull_secrets = [\"${3:registrykey}\"]",
+      "}",
+      "",
+      "deployments = {",
+      "  \"${4:app}\" = {",
+      "    path            = \"${5:$4}\"",
+      "    namespace       = \"${1:production}\"",
+      "    service_account = \"${2:default}\"",
+      "  }",
+      "}"
+    ]
+  },
+  "Service Account": {
+    "prefix": "service-account",
+    "description": "Create a service_account block",
+    "body": [
+      "service_account \"${1:name}\" {",
+      "  image_pull_secrets = [\"${2:registrykey}\"]",
+      "}"
     ]
   },
   "Variable": {

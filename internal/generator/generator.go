@@ -18,6 +18,21 @@ func GenerateCronJobManifest(cj types.CronJobConfig) []Manifest {
 // Generate produces all K8s manifests for a full kdef config.
 func Generate(config *types.KdefConfig) map[string][]Manifest {
 	result := make(map[string][]Manifest)
+
+	// Namespaces
+	for _, ns := range config.Namespaces {
+		result["namespace-"+ns] = []Manifest{{Object: GenerateNamespace(ns)}}
+	}
+
+	// ServiceAccounts — generate in each namespace where they're referenced
+	saNamespaces := collectServiceAccountNamespaces(config)
+	for _, sa := range config.ServiceAccounts {
+		for _, ns := range saNamespaces[sa.Name] {
+			key := "sa-" + sa.Name + "-" + ns
+			result[key] = []Manifest{{Object: GenerateServiceAccount(sa, ns)}}
+		}
+	}
+
 	for _, dep := range config.Deployments {
 		result[dep.Name] = GenerateDeploymentV2(dep)
 	}
@@ -32,6 +47,35 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 	}
 	for _, pvc := range config.PersistentVolumeClaims {
 		result["pvc-"+pvc.Name] = []Manifest{{Object: GeneratePersistentVolumeClaim(pvc)}}
+	}
+	return result
+}
+
+// collectServiceAccountNamespaces finds which namespaces each service account is used in.
+func collectServiceAccountNamespaces(config *types.KdefConfig) map[string][]string {
+	seen := make(map[string]map[string]bool) // sa name -> set of namespaces
+	for _, dep := range config.Deployments {
+		if dep.ServiceAccountName != "" {
+			if seen[dep.ServiceAccountName] == nil {
+				seen[dep.ServiceAccountName] = make(map[string]bool)
+			}
+			seen[dep.ServiceAccountName][dep.Namespace] = true
+		}
+	}
+	for _, cj := range config.CronJobs {
+		if cj.ServiceAccountName != "" {
+			if seen[cj.ServiceAccountName] == nil {
+				seen[cj.ServiceAccountName] = make(map[string]bool)
+			}
+			seen[cj.ServiceAccountName][cj.Namespace] = true
+		}
+	}
+
+	result := make(map[string][]string)
+	for name, nsSet := range seen {
+		for ns := range nsSet {
+			result[name] = append(result[name], ns)
+		}
 	}
 	return result
 }

@@ -2,31 +2,85 @@
 
 ## `root.kdef` — Multi-Project Root
 
-When managing multiple apps from a single repository, create a `root.kdef` in the root directory that lists subdirectories to load. Each subdirectory is treated as an independent kdef project (with its own `vars.kdef`, environments, etc.).
+The `root.kdef` file is the entry point for multi-app repositories. It defines namespaces, service accounts, ingress defaults, and lists all sub-projects with their configuration.
 
 ```hcl
 # root.kdef
-deployments = [
-  "app1",
-  "app2",
-  "apps/app3",
-]
+
+namespaces = ["production", "staging"]
+
+service_account "default" {
+  image_pull_secrets = ["registrykey"]
+}
+
+ingress_defaults {
+  tls    = true
+  issuer = "letsencrypt-production"
+  annotations = {
+    "nginx.ingress.kubernetes.io" = {
+      "force-ssl-redirect" = "true"
+    }
+  }
+}
+
+# Global defaults (overridable per deployment and via CLI)
+env = "production"
+set = { "replicas" = "3" }
+
+deployments = {
+  "api" = {
+    path            = "api"
+    namespace       = "production"
+    service_account = "default"
+  }
+  "api-staging" = {
+    path            = "api"           # same app, different config
+    namespace       = "staging"
+    service_account = "default"
+    env             = "staging"       # overrides global env
+    set             = { "replicas" = "1" }
+  }
+  "worker" = {
+    path      = "worker"
+    namespace = "production"
+  }
+}
 ```
 
 ```
 repo/
   root.kdef
-  app1/
+  api/
     vars.kdef
     app.kdef
-  app2/
-    vars.kdef
+  worker/
     app.kdef
-    configs/
-  apps/
-    app3/
-      app.kdef
 ```
+
+### Generated resources
+
+- **Namespace** manifests for each entry in `namespaces`
+- **ServiceAccount** manifests (with `imagePullSecrets`) in each namespace where they're referenced
+
+### Namespace and service account injection
+
+- `namespace` from a deployment entry is injected into all blocks (deployments, cronjobs, configmaps, etc.) that don't already specify one
+- `service_account` is injected into deployments and cronjobs that don't already specify one
+- Individual `.kdef` files can override the namespace, but it must be in the `namespaces` list
+- Every resource must have a namespace — either from root.kdef or the `.kdef` file
+
+### Override precedence (highest wins)
+
+| Setting | CLI flags | Per-deployment in root.kdef | Global in root.kdef |
+|---------|-----------|----------------------------|---------------------|
+| `env`   | `--env`   | `env = "staging"`          | `env = "production"`|
+| `set`   | `--set`   | `set = { ... }`            | `set = { ... }`     |
+
+### Validation
+
+- Namespace must be in the `namespaces` list (if defined)
+- Service account must be defined as a `service_account` block (if referenced)
+- Every resource must have a namespace — missing namespace is an error
 
 All CLI commands work transparently:
 
@@ -36,8 +90,6 @@ kdef validate --dir repo            # validates all apps
 kdef diff --dir repo --env staging  # diffs all apps against cluster
 kdef apply --dir repo --env prod    # applies all apps
 ```
-
-CLI flags (`--set`, `--env`, `--values`, `--vars-from`) are passed through to each sub-project. Subdirectories can also contain their own `root.kdef` for nested multi-project structures.
 
 ---
 
