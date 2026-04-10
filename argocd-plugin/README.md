@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/assets/kdef-logo-dark.svg">
+  <img src="../docs/assets/kdef-logo.svg" alt="kdef" width="320">
+</picture>
+
 # kdef ArgoCD Plugin
 
 Config Management Plugin for ArgoCD that renders `.kdef` files natively.

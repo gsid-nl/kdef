@@ -1,4 +1,7 @@
-# kdef
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/kdef-logo-dark.svg">
+  <img src="docs/assets/kdef-logo.svg" alt="kdef" width="420">
+</picture>
 
 **Declarative Kubernetes configuration language.**
 
