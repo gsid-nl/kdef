@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="112" viewBox="0 0 210 56" style="background:#101a16">
+  <polygon fill="#5DCAA5" points="28,4 47.5,15.5 47.5,38.5 28,50 8.5,38.5 8.5,15.5"/>
+  <text x="28" y="38" text-anchor="middle" font-size="26" font-family="system-ui, -apple-system, sans-serif" font-weight="500" fill="#04342C">k</text>
+  <text font-size="30" font-family="system-ui, -apple-system, sans-serif" font-weight="400">
+    <tspan x="62" y="39" fill="#5DCAA5">k</tspan><tspan fill="#ddeee8">def</tspan>
+  </text>
+</svg>
