@@ -92,10 +92,12 @@ kdef apply --dir k8s/ --dry-run   # preview first
 - [Variables](docs/variables.md) — typed variables, imports, ingress defaults, environment overrides
 - [Functions](docs/functions.md) — `image()`, `secret()`, `configmap()`, `file()`
 - [Conditionals and Loops](docs/conditionals-and-loops.md) — `if` blocks, `for` loops, ternary
-- [CLI Commands](docs/cli.md) — render, diff, apply, import, seal, seal-secret
+- [CLI Commands](docs/cli.md) — render, diff, apply, validate, import, seal, seal-secret, install-hook
 - [Comparison](docs/comparison.md) — vs Kustomize, Helm, CUE, KCL, Pkl
 
 ## Project Structure
+
+### Single-app layout
 
 ```
 k8s/
@@ -112,6 +114,27 @@ k8s/
 └── values/
     └── production.json       # complex variable values
 ```
+
+### Multi-app layout with `root.kdef`
+
+For repositories that ship several apps together, a `root.kdef` at the top declares shared namespaces, service accounts, ingress defaults, and the list of sub-projects. Root-level definition files (`configmaps.kdef`, `secrets.kdef`, ...) are parsed once and shared across all sub-projects.
+
+```
+repo/
+├── root.kdef                 # namespaces, service_accounts, deployments {...}
+├── configmaps.kdef           # shared configmaps (parsed once)
+├── secrets.kdef              # shared sealed secrets (parsed once)
+├── api/
+│   ├── vars.kdef
+│   └── app.kdef              # deployment "api"
+├── worker/
+│   └── app.kdef              # deployment "worker"
+└── environments/
+    ├── staging.kdef
+    └── production.kdef
+```
+
+All CLI commands (`render`, `validate`, `diff`, `apply`) transparently walk every sub-project listed in `root.kdef`. See [Block Types › root.kdef](docs/block-types.md) for the full reference.
 
 ## ArgoCD Integration
 

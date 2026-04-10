@@ -9,6 +9,7 @@
 | `kdef import` | Generate `.kdef` from existing K8s resources |
 | `kdef seal` | Encrypt a single value for use in `sealedsecret` blocks |
 | `kdef seal-secret` | Seal an entire Kubernetes Secret into a `sealedsecret` block |
+| `kdef install-hook` | Install a git pre-commit hook that runs `kdef validate` |
 | `kdef version` | Print version information |
 
 ## Common Flags
@@ -87,3 +88,23 @@ kdef seal-secret --name db-credentials --namespace production \
 ```
 
 Output is a complete `sealedsecret` block ready to paste into a `.kdef` file.
+
+## Install Hook
+
+Install a git pre-commit hook that runs `kdef validate` before each commit, aborting the commit if validation fails. The hook walks up from `--dir` to find the repo root (also handles git worktrees and submodules) and writes `.git/hooks/pre-commit`.
+
+```bash
+# Fresh install in the current repo
+kdef install-hook
+
+# Run from anywhere inside the repo, or point at a different project
+kdef install-hook --dir path/to/project
+
+# Append the kdef check to an existing pre-commit hook (safe, idempotent)
+kdef install-hook --append
+
+# Overwrite an existing hook with a standalone kdef hook
+kdef install-hook --force
+```
+
+The generated script skips validation with a warning if `kdef` is not in `PATH`, so cloning the repo on a machine without kdef installed does not block commits. With `--append`, the kdef block is wrapped in `# >>> kdef validate >>>` / `# <<< kdef validate <<<` sentinels and re-running `--append` is a no-op. `--append` and `--force` are mutually exclusive.
