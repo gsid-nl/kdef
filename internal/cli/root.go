@@ -41,5 +41,6 @@ func init() {
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(sealCmd)
 	rootCmd.AddCommand(sealSecretCmd)
+	rootCmd.AddCommand(installHookCmd)
 	rootCmd.AddCommand(versionCmd)
 }
