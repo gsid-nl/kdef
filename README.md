@@ -91,8 +91,8 @@ kdef apply --dir k8s/ --dry-run   # preview first
 
 ## Documentation
 
-- [Block Types](docs/block-types.md) — `root.kdef`, `deployment`, `cronjob`, `configmap`, `sealedsecret`, `persistentvolumeclaim`
-- [Variables](docs/variables.md) — typed variables, imports, ingress defaults, environment overrides
+- [Block Types](docs/block-types.md) — `root.kdef`, `deployment`, `cronjob`, `configmap`, `secret`, `sealedsecret`, `persistentvolumeclaim`
+- [Variables](docs/variables.md) — typed variables, `env` (local environment), imports, ingress defaults, environment overrides
 - [Functions](docs/functions.md) — `image()`, `secret()`, `configmap()`, `file()`
 - [Conditionals and Loops](docs/conditionals-and-loops.md) — `if` blocks, `for` loops, ternary
 - [CLI Commands](docs/cli.md) — render, diff, apply, validate, import, seal, seal-secret, install-hook
@@ -110,7 +110,7 @@ k8s/
 ├── web.kdef                  # deployment: web + nginx sidecar
 ├── cronjobs.kdef             # cronjob definitions
 ├── configmaps.kdef           # configmap definitions
-├── secrets.kdef              # sealed secret definitions
+├── secrets.kdef              # secret / sealed secret definitions
 ├── environments/
 │   ├── staging.kdef          # staging overrides
 │   └── production.kdef       # production overrides
@@ -126,7 +126,7 @@ For repositories that ship several apps together, a `root.kdef` at the top decla
 repo/
 ├── root.kdef                 # namespaces, service_accounts, deployments {...}
 ├── configmaps.kdef           # shared configmaps (parsed once)
-├── secrets.kdef              # shared sealed secrets (parsed once)
+├── secrets.kdef              # shared secrets / sealed secrets (parsed once)
 ├── api/
 │   ├── vars.kdef
 │   └── app.kdef              # deployment "api"

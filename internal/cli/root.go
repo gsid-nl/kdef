@@ -17,6 +17,7 @@ Block types:
   deployment     K8s Deployment with explicit containers, service, and ingress
   cronjob        K8s CronJob
   configmap      K8s ConfigMap
+  secret         K8s Secret
   sealedsecret   Bitnami SealedSecret (encrypted secrets safe to commit)`,
 }
 

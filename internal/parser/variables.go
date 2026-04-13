@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -310,6 +311,7 @@ func BuildEvalContext(vars map[string]types.VariableDecl, overrides map[string]s
 	ctx := &hcl.EvalContext{
 		Variables: map[string]cty.Value{
 			"var": cty.ObjectVal(varValues),
+			"env": buildEnvVars(),
 		},
 		Functions: map[string]function.Function{
 			"secret":    secretFunction(),
@@ -371,4 +373,19 @@ func configmapFunction() function.Function {
 			}), nil
 		},
 	})
+}
+
+// buildEnvVars collects all local environment variables into a cty object
+// for use as the "env" variable namespace (e.g. env.HOME, "${env.DATABASE_URL}").
+func buildEnvVars() cty.Value {
+	envValues := make(map[string]cty.Value)
+	for _, entry := range os.Environ() {
+		if k, v, ok := strings.Cut(entry, "="); ok {
+			envValues[k] = cty.StringVal(v)
+		}
+	}
+	if len(envValues) == 0 {
+		return cty.EmptyObjectVal
+	}
+	return cty.ObjectVal(envValues)
 }

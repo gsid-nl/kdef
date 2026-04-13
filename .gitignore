@@ -2,3 +2,4 @@
 kdef-design.md
 dist/
 release-notes.md
+internal/parser/app_test.go
