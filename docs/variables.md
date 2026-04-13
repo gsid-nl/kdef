@@ -50,6 +50,34 @@ scale {
 }
 ```
 
+## Environment Variables (`env`)
+
+Local environment variables are available via the `env` namespace. This works just like `var` — direct access and string interpolation are both supported:
+
+```hcl
+container "api" {
+  image = "nginx:latest"
+
+  env {
+    HOME      = env.HOME
+    DATA_PATH = "${env.HOME}/data"
+    USER      = env.USER
+  }
+}
+
+volume "data" {
+  mount_path = "${env.HOME}/data"
+}
+```
+
+All environment variables from the local shell are available. Referencing an unset variable is a render-time error:
+
+```
+Error: This object does not have an attribute named "NONEXISTENT_VAR".
+```
+
+This is useful for local development (machine-specific paths), CI/CD pipelines (injected secrets and config), and keeping values out of committed files.
+
 ## Overrides
 
 ```bash

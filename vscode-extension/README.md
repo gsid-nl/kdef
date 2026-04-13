@@ -32,13 +32,22 @@ Syntax highlighting, snippets, and language support for [kdef](https://github.co
 | `volume-empty` | EmptyDir volume mount |
 | `env-from-configmap` | Import env from ConfigMap |
 | `env-from-secret` | Import env from Secret |
-| `secret` | Secret key reference |
+| `secret` | Secret block / secret key reference |
 | `resources` | Resources block |
 | `security-context` | Security context |
 | `autoscale` | HPA autoscale block |
 | `for` | For loop |
 | `if` | Conditional block |
 | `ingress-defaults` | Shared ingress defaults |
+| `service-typed` | Service block with explicit type |
+| `imagepullpolicy` | `image_pull_policy` field (enum) |
+| `accessmodes` | PVC `access_modes` field (enum) |
+| `servicetype` | Service `type` field (enum) |
+| `concurrency` | Cronjob `concurrency` field (enum) |
+| `restart` | Cronjob `restart` field (enum) |
+| `schedule` | Cronjob `schedule` with cron presets |
+| `secrettype` | Sealed secret `type` field (enum) |
+| `storageclass` | PVC `storage_class` common options |
 
 ## Install
 
@@ -47,7 +56,7 @@ Syntax highlighting, snippets, and language support for [kdef](https://github.co
 ```bash
 cd vscode-extension
 npx @vscode/vsce package
-code --install-extension kdef-0.2.0.vsix
+code --install-extension kdef-0.4.0.vsix
 ```
 
 ### Development

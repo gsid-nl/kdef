@@ -157,15 +157,17 @@
     "description": "Create a cronjob block",
     "body": [
       "cronjob \"${1:name}\" {",
-      "  namespace = \"${2:default}\"",
-      "  schedule  = \"${3:*/5 * * * *}\"",
-      "  image     = \"${4:image:tag}\"",
+      "  namespace   = \"${2:default}\"",
+      "  schedule    = \"${3|*/5 * * * *,0 * * * *,0 0 * * *,0 0 * * 0,@hourly,@daily,@weekly,@monthly|}\"",
+      "  concurrency = \"${4|Allow,Forbid,Replace|}\"",
+      "  restart     = \"${5|OnFailure,Never|}\"",
+      "  image       = \"${6:image:tag}\"",
       "",
       "  command = [",
-      "    \"${5:command}\",",
+      "    \"${7:command}\",",
       "  ]",
       "",
-      "  deadline = \"${6:4m}\"",
+      "  deadline = \"${8:4m}\"",
       "}"
     ]
   },
@@ -195,13 +197,27 @@
       "}"
     ]
   },
+  "Secret": {
+    "prefix": "secret",
+    "description": "Create a secret block",
+    "body": [
+      "secret \"${1:name}\" {",
+      "  namespace = \"${2:default}\"",
+      "  type      = \"${3|Opaque,kubernetes.io/tls,kubernetes.io/dockerconfigjson,kubernetes.io/basic-auth,kubernetes.io/ssh-auth,kubernetes.io/service-account-token|}\"",
+      "",
+      "  data = {",
+      "    ${4:KEY} = \"${5:value}\"",
+      "  }",
+      "}"
+    ]
+  },
   "Sealed Secret": {
     "prefix": "sealedsecret",
     "description": "Create a sealed secret block",
     "body": [
       "sealedsecret \"${1:name}\" {",
       "  namespace = \"${2:default}\"",
-      "  type      = \"${3:Opaque}\"",
+      "  type      = \"${3|Opaque,kubernetes.io/tls,kubernetes.io/dockerconfigjson,kubernetes.io/basic-auth,kubernetes.io/ssh-auth,kubernetes.io/service-account-token|}\"",
       "",
       "  data = {",
       "    ${4:KEY} = \"${5:encrypted-value}\"",
@@ -215,8 +231,8 @@
     "body": [
       "persistentvolumeclaim \"${1:name}\" {",
       "  namespace     = \"${2:default}\"",
-      "  storage_class = \"${3:gp3}\"",
-      "  access_modes  = [\"${4:ReadWriteOnce}\"]",
+      "  storage_class = \"${3|gp3,gp2,standard,premium-rwo,fast,slow|}\"",
+      "  access_modes  = [\"${4|ReadWriteOnce,ReadOnlyMany,ReadWriteMany,ReadWriteOncePod|}\"]",
       "  storage       = \"${5:10Gi}\"",
       "}"
     ]
@@ -263,7 +279,7 @@
     "description": "Declare a variable",
     "body": [
       "variable \"${1:name}\" {",
-      "  type    = \"${2|string,number,bool|}\"",
+      "  type    = \"${2|string,number,bool,enum[dev, staging, production]|}\"",
       "  default = \"${3:value}\"",
       "}"
     ]
@@ -446,5 +462,55 @@
       "  }",
       "}"
     ]
+  },
+  "Service (typed)": {
+    "prefix": "service-typed",
+    "description": "Service block with explicit type",
+    "body": [
+      "service {",
+      "  type = \"${1|ClusterIP,NodePort,LoadBalancer|}\"",
+      "  port \"${2:80}\" \"${3:http}\" {}",
+      "}"
+    ]
+  },
+  "Image Pull Policy": {
+    "prefix": "imagepullpolicy",
+    "description": "Insert image_pull_policy with choice list",
+    "body": "image_pull_policy = \"${1|IfNotPresent,Always,Never|}\""
+  },
+  "Access Modes": {
+    "prefix": "accessmodes",
+    "description": "Insert access_modes for a PVC",
+    "body": "access_modes = [\"${1|ReadWriteOnce,ReadOnlyMany,ReadWriteMany,ReadWriteOncePod|}\"]"
+  },
+  "Service Type": {
+    "prefix": "servicetype",
+    "description": "Insert service type with choice list",
+    "body": "type = \"${1|ClusterIP,NodePort,LoadBalancer|}\""
+  },
+  "Cronjob Concurrency": {
+    "prefix": "concurrency",
+    "description": "Insert cronjob concurrency policy",
+    "body": "concurrency = \"${1|Allow,Forbid,Replace|}\""
+  },
+  "Cronjob Restart": {
+    "prefix": "restart",
+    "description": "Insert cronjob restart policy",
+    "body": "restart = \"${1|OnFailure,Never|}\""
+  },
+  "Cronjob Schedule": {
+    "prefix": "schedule",
+    "description": "Insert a cronjob schedule with common presets",
+    "body": "schedule = \"${1|*/5 * * * *,*/15 * * * *,0 * * * *,0 0 * * *,0 0 * * 0,0 0 1 * *,@hourly,@daily,@weekly,@monthly,@yearly|}\""
+  },
+  "Secret Type": {
+    "prefix": "secrettype",
+    "description": "Insert a sealedsecret type with choice list",
+    "body": "type = \"${1|Opaque,kubernetes.io/tls,kubernetes.io/dockerconfigjson,kubernetes.io/basic-auth,kubernetes.io/ssh-auth,kubernetes.io/service-account-token|}\""
+  },
+  "Storage Class": {
+    "prefix": "storageclass",
+    "description": "Insert a storage_class with common options (not enforced)",
+    "body": "storage_class = \"${1|gp3,gp2,io1,io2,standard,standard-rwo,premium-rwo,fast,slow,hostpath|}\""
   }
 }

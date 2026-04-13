@@ -6,6 +6,7 @@ type KdefConfig struct {
 	Deployments     []DeploymentConfig
 	CronJobs        []CronJobConfig
 	ConfigMaps              []ConfigMapConfig
+	Secrets                 []SecretConfig
 	SealedSecrets           []SealedSecretConfig
 	PersistentVolumeClaims  []PersistentVolumeClaimConfig
 	Namespaces              []string

@@ -173,6 +173,7 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		config.CronJobs = append(config.CronJobs, result.CronJobs...)
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
 		config.Deployments = append(config.Deployments, result.Deployments...)
+		config.Secrets = append(config.Secrets, result.Secrets...)
 		config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
 		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
 	}
@@ -240,6 +241,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	merged.CronJobs = append(merged.CronJobs, rootDefs.CronJobs...)
 	merged.ConfigMaps = append(merged.ConfigMaps, rootDefs.ConfigMaps...)
 	merged.Deployments = append(merged.Deployments, rootDefs.Deployments...)
+	merged.Secrets = append(merged.Secrets, rootDefs.Secrets...)
 	merged.SealedSecrets = append(merged.SealedSecrets, rootDefs.SealedSecrets...)
 	merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, rootDefs.PersistentVolumeClaims...)
 
@@ -297,6 +299,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 		merged.Deployments = append(merged.Deployments, config.Deployments...)
 		merged.CronJobs = append(merged.CronJobs, config.CronJobs...)
 		merged.ConfigMaps = append(merged.ConfigMaps, config.ConfigMaps...)
+		merged.Secrets = append(merged.Secrets, config.Secrets...)
 		merged.SealedSecrets = append(merged.SealedSecrets, config.SealedSecrets...)
 		merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, config.PersistentVolumeClaims...)
 	}
@@ -329,6 +332,11 @@ func injectNamespace(config *types.KdefConfig, namespace string) {
 	for i := range config.ConfigMaps {
 		if config.ConfigMaps[i].Namespace == "" {
 			config.ConfigMaps[i].Namespace = namespace
+		}
+	}
+	for i := range config.Secrets {
+		if config.Secrets[i].Namespace == "" {
+			config.Secrets[i].Namespace = namespace
 		}
 	}
 	for i := range config.SealedSecrets {
@@ -397,6 +405,11 @@ func validateNamespaces(config *types.KdefConfig, root *types.RootConfig) error 
 	}
 	for _, cm := range config.ConfigMaps {
 		if err := check("configmap", cm.Name, cm.Namespace); err != nil {
+			return err
+		}
+	}
+	for _, s := range config.Secrets {
+		if err := check("secret", s.Name, s.Namespace); err != nil {
 			return err
 		}
 	}
@@ -692,6 +705,7 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 		config.CronJobs = append(config.CronJobs, result.CronJobs...)
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
 		config.Deployments = append(config.Deployments, result.Deployments...)
+		config.Secrets = append(config.Secrets, result.Secrets...)
 		config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
 		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
 	}
