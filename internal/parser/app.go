@@ -38,6 +38,7 @@ type FileResult struct {
 	Deployments            []types.DeploymentConfig
 	CronJobs               []types.CronJobConfig
 	ConfigMaps             []types.ConfigMapConfig
+	Secrets                []types.SecretConfig
 	SealedSecrets          []types.SealedSecretConfig
 	PersistentVolumeClaims []types.PersistentVolumeClaimConfig
 }
@@ -54,6 +55,7 @@ func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnos
 		result.CronJobs = append(result.CronJobs, fr.CronJobs...)
 		result.ConfigMaps = append(result.ConfigMaps, fr.ConfigMaps...)
 		result.Deployments = append(result.Deployments, fr.Deployments...)
+		result.Secrets = append(result.Secrets, fr.Secrets...)
 		result.SealedSecrets = append(result.SealedSecrets, fr.SealedSecrets...)
 		result.PersistentVolumeClaims = append(result.PersistentVolumeClaims, fr.PersistentVolumeClaims...)
 	}
@@ -81,6 +83,7 @@ var topLevelSchema = &hcl.BodySchema{
 		{Type: "deployment", LabelNames: []string{"name"}},
 		{Type: "cronjob", LabelNames: []string{"name"}},
 		{Type: "configmap", LabelNames: []string{"name"}},
+		{Type: "secret", LabelNames: []string{"name"}},
 		{Type: "sealedsecret", LabelNames: []string{"name"}},
 		{Type: "persistentvolumeclaim", LabelNames: []string{"name"}},
 		{Type: "images"},
@@ -112,6 +115,12 @@ func parseBlocksFromBody(body hcl.Body, ctx *hcl.EvalContext, result *FileResult
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				result.ConfigMaps = append(result.ConfigMaps, cm)
+			}
+		case "secret":
+			s, moreDiags := parseSecretBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.Secrets = append(result.Secrets, s)
 			}
 		case "sealedsecret":
 			ss, moreDiags := parseSealedSecretBlock(block, ctx)

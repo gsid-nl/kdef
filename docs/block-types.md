@@ -64,7 +64,7 @@ repo/
 
 ### Namespace and service account injection
 
-- `namespace` from a deployment entry is injected into all blocks (deployments, cronjobs, configmaps, etc.) that don't already specify one
+- `namespace` from a deployment entry is injected into all blocks (deployments, cronjobs, configmaps, secrets, etc.) that don't already specify one
 - `service_account` is injected into deployments and cronjobs that don't already specify one
 - Individual `.kdef` files can override the namespace, but it must be in the `namespaces` list
 - Every resource must have a namespace — either from root.kdef or the `.kdef` file
@@ -369,6 +369,71 @@ configmap "nginx-config" {
   }
 }
 ```
+
+## `secret` — Kubernetes Secret
+
+Define plain Kubernetes Secrets. Generates `v1/Secret` manifests using `stringData` (Kubernetes handles the base64 encoding).
+
+```hcl
+secret "db-credentials" {
+  namespace = "production"
+  type      = "Opaque"    # optional, defaults to "Opaque"
+
+  data = {
+    username = "admin"
+    password = var.db_password
+  }
+}
+```
+
+Supports all standard Kubernetes secret types:
+
+| Type | Description |
+|------|-------------|
+| `Opaque` | Default, arbitrary key-value data |
+| `kubernetes.io/tls` | TLS certificate and key |
+| `kubernetes.io/dockerconfigjson` | Docker registry credentials |
+| `kubernetes.io/basic-auth` | Basic authentication credentials |
+| `kubernetes.io/ssh-auth` | SSH authentication credentials |
+
+Load file contents with `file()`:
+
+```hcl
+secret "tls-certs" {
+  namespace = "production"
+  type      = "kubernetes.io/tls"
+
+  data = {
+    "tls.crt" = file("certs/server.crt")
+    "tls.key" = file("certs/server.key")
+  }
+}
+```
+
+Pairs naturally with `secret()` references in deployments:
+
+```hcl
+secret "db-credentials" {
+  namespace = "production"
+  data = {
+    DATABASE_URL = var.database_url
+  }
+}
+
+deployment "api" {
+  namespace = "production"
+  container "api" {
+    image = image("api")
+    env {
+      DATABASE_URL = secret("db-credentials", "DATABASE_URL")
+    }
+  }
+}
+```
+
+> **Note:** Secret values are stored in plaintext in `.kdef` files. For secrets that must be safe to commit to git, use [`sealedsecret`](#sealedsecret--bitnami-sealed-secret) instead.
+
+---
 
 ## `sealedsecret` — Bitnami Sealed Secret
 
