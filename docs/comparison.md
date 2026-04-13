@@ -13,6 +13,7 @@
 | Multi-container | Yes (raw YAML) | Yes (raw YAML) | Yes (explicit `container` blocks) |
 | Import existing | No | No | Yes (`kdef import`) |
 | Image registry | Yes (`kustomization.yaml`) | Yes (values.yaml) | Yes (`images {}` block + `image()`) |
+| Local env variables | No | No | Yes (`env.HOME`, `"${env.VAR}"`) |
 | Secret references | No | No | Yes (`secret()` function) |
 | Sealed secrets | No | No | Yes (`sealedsecret` block + `kdef seal`) |
 | Escape hatch | Patches | Raw YAML | `raw` block (deep-merge) |
@@ -31,6 +32,7 @@
 | K8s-aware | No (generic config) | Yes (K8s schemas) | Yes (K8s templates) | Yes (deployment-centric) |
 | Import existing manifests | Yes (`cue import`) | Yes (`kcl import`) | Yes (convert module) | Yes (`kdef import`) |
 | Image registry | No | No | No | Yes (`images {}` block + `image()`) |
+| Local env variables | No | No | No | Yes (`env.HOME`, `"${env.VAR}"`) |
 | Secret references | No | No | No | Yes (`secret()` function) |
 | Sealed secrets | No | No | No | Yes (`sealedsecret` block + `kdef seal`) |
 | Multi-container pods | Manual (raw YAML) | Manual (raw YAML) | Manual (raw YAML) | Yes (explicit `container` blocks) |
