@@ -1,0 +1,12 @@
+apiVersion: v2
+name: kdef-controller
+description: Flux controller for rendering and applying kdef files
+type: application
+version: 0.1.0
+appVersion: "0.5.1"
+home: https://github.com/gsid-nl/kdef
+sources:
+  - https://github.com/gsid-nl/kdef
+maintainers:
+  - name: Guido Smit
+    email: guido@gsid.nl

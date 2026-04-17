@@ -97,6 +97,7 @@ kdef apply --dir k8s/ --dry-run   # preview first
 - [Conditionals and Loops](docs/conditionals-and-loops.md) — `if` blocks, `for` loops, ternary
 - [CLI Commands](docs/cli.md) — render, diff, apply, validate, import, seal, seal-secret, install-hook
 - [Comparison](docs/comparison.md) — vs Kustomize, Helm, CUE, KCL, Pkl
+- [Editor Integration](#editor-integration) — VS Code extension, JetBrains LSP setup
 
 ## Project Structure
 
@@ -139,7 +140,62 @@ repo/
 
 All CLI commands (`render`, `validate`, `diff`, `apply`) transparently walk every sub-project listed in `root.kdef`. See [Block Types › root.kdef](docs/block-types.md) for the full reference.
 
-## ArgoCD Integration
+## Editor Integration
+
+kdef includes a language server (`kdef-lsp`) that provides real-time diagnostics (error squiggles) as you type.
+
+### VS Code
+
+Install the kdef extension (`.vsix` included in [releases](https://github.com/gsid-nl/kdef/releases)) and make sure `kdef-lsp` is on your `PATH`:
+
+```bash
+# Install the language server
+go install github.com/gsid-nl/kdef/cmd/kdef-lsp@latest
+
+# Or build from source
+make build    # produces ./kdef-lsp
+```
+
+The extension activates automatically for `.kdef` files. To use a custom path, set `kdef.lsp.path` in VS Code settings.
+
+### JetBrains (IntelliJ, GoLand, WebStorm, PhpStorm)
+
+JetBrains IDEs support LSP natively (2023.3+). To set up:
+
+1. Install `kdef-lsp` (see above)
+2. Go to **Settings** → **Languages & Frameworks** → **Language Servers**
+3. Click **+** to add a new server
+4. Set **Name** to `kdef`
+5. Set **Command** to `kdef-lsp` (or the full path to the binary)
+6. Under **File type mappings**, add `*.kdef`
+7. Click **OK** and open any `.kdef` file
+
+For syntax highlighting in JetBrains, install the [TextMate Bundles](https://plugins.jetbrains.com/plugin/7221-textmate-bundles) plugin and point it to `vscode-extension/syntaxes/kdef.tmLanguage.json`.
+
+## GitOps Integration
+
+### Flux CD
+
+kdef includes a Kubernetes controller for Flux. Define a `KdefRelease` CR pointing at a Flux `GitRepository` and the controller renders and applies your `.kdef` files automatically:
+
+```yaml
+apiVersion: kdef.gsid.nl/v1alpha1
+kind: KdefRelease
+metadata:
+  name: my-app
+  namespace: flux-system
+spec:
+  sourceRef:
+    kind: GitRepository
+    name: my-app
+  path: ./k8s/
+  interval: 5m
+  prune: true
+```
+
+See [flux-controller/README.md](flux-controller/README.md) for installation and full reference.
+
+### ArgoCD
 
 kdef includes a Config Management Plugin for ArgoCD. See [argocd-plugin/README.md](argocd-plugin/README.md) for setup instructions.
 

@@ -221,6 +221,9 @@ func parseContainerBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Containe
 		diags = append(diags, moreDiags...)
 		if !moreDiags.HasErrors() {
 			c.ImagePullPolicy = val.AsString()
+			if d := validateImagePullPolicy(c.ImagePullPolicy, attr); d != nil {
+				diags = append(diags, d)
+			}
 		}
 	}
 

@@ -58,6 +58,17 @@ func ParseVariableBytes(src []byte, filename string) (map[string]types.VariableD
 	return parseVariableBody(file.Body)
 }
 
+// ParseVariableFileFromBytes parses variable declarations from raw bytes only (no disk read).
+// Used by the LSP server to parse in-memory (unsaved) content.
+func ParseVariableFileFromBytes(src []byte, filename string) (map[string]types.VariableDecl, hcl.Diagnostics) {
+	p := hclparse.NewParser()
+	file, diags := p.ParseHCL(src, filename)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+	return parseVariableBody(file.Body)
+}
+
 func parseVariableBody(body hcl.Body) (map[string]types.VariableDecl, hcl.Diagnostics) {
 	result, diags := parseVariableBodyWithImports(body, "")
 	return result.Variables, diags

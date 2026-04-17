@@ -3,3 +3,9 @@ kdef-design.md
 dist/
 release-notes.md
 internal/parser/app_test.go
+vscode-extension/node_modules/
+vscode-extension/out/
+/kdef
+/kdef-lsp
+argocd-plugin/kdef
+vscode-extension/*.vsix

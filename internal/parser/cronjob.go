@@ -75,6 +75,13 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 		}
 	}
 
+	// Validate image_pull_policy
+	if attr, ok := content.Attributes["image_pull_policy"]; ok && cj.ImagePullPolicy != "" {
+		if d := validateImagePullPolicy(cj.ImagePullPolicy, attr); d != nil {
+			diags = append(diags, d)
+		}
+	}
+
 	// Command (list of strings)
 	if attr, ok := content.Attributes["command"]; ok {
 		val, moreDiags := attr.Expr.Value(ctx)
