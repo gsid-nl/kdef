@@ -2,3 +2,5 @@
 .vscodeignore
 **/*.vsix
 **/.DS_Store
+src/**
+tsconfig.json

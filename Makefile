@@ -1,4 +1,4 @@
-VERSION ?= 0.4.0
+VERSION ?= 0.5.1
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "nogit")
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -s -w \
@@ -13,21 +13,27 @@ NFPM    := $(shell go env GOPATH)/bin/nfpm
 
 build:
 	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -trimpath -o kdef ./cmd/kdef
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -trimpath -o kdef-lsp ./cmd/kdef-lsp
 
 test:
 	go test ./... -v
 
 clean:
-	rm -f kdef
+	rm -f kdef kdef-lsp
 	rm -rf $(DIST)
 
 build-all: clean
 	@mkdir -p $(DIST)
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-linux-amd64       ./cmd/kdef
-	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-linux-arm64       ./cmd/kdef
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-darwin-amd64      ./cmd/kdef
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-darwin-arm64      ./cmd/kdef
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-windows-amd64.exe ./cmd/kdef
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-linux-amd64           ./cmd/kdef
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-linux-arm64           ./cmd/kdef
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-darwin-amd64          ./cmd/kdef
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-darwin-arm64          ./cmd/kdef
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-windows-amd64.exe     ./cmd/kdef
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-lsp-linux-amd64       ./cmd/kdef-lsp
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-lsp-linux-arm64       ./cmd/kdef-lsp
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-lsp-darwin-amd64      ./cmd/kdef-lsp
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-lsp-darwin-arm64      ./cmd/kdef-lsp
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -trimpath -o $(DIST)/kdef-lsp-windows-amd64.exe ./cmd/kdef-lsp
 	@echo "Built $(VERSION) binaries in $(DIST)/"
 	@ls -lh $(DIST)/
 

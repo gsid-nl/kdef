@@ -12,6 +12,7 @@ type KdefConfig struct {
 	Namespaces              []string
 	ServiceAccounts         []ServiceAccountConfig
 	IngressDefaults         *IngressDefaults
+	Warnings                []string // non-fatal validation warnings
 }
 
 // IngressDefaults defines shared settings inherited by all ingress blocks.

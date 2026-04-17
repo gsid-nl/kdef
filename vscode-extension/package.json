@@ -2,7 +2,7 @@
   "name": "kdef",
   "displayName": "kdef - Kubernetes Declarative Configuration",
   "description": "Syntax highlighting, snippets, and language support for .kdef files",
-  "version": "0.4.0",
+  "version": "0.5.1",
   "publisher": "gsid",
   "author": {
     "name": "Guido Smit",
@@ -11,9 +11,13 @@
   },
   "license": "Apache-2.0",
   "icon": "icon.png",
+  "main": "./out/extension.js",
   "engines": {
     "vscode": "^1.75.0"
   },
+  "activationEvents": [
+    "onLanguage:kdef"
+  ],
   "categories": [
     "Programming Languages",
     "Snippets"
@@ -60,6 +64,30 @@
         "language": "kdef",
         "path": "./snippets/kdef.json"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "kdef",
+      "properties": {
+        "kdef.lsp.path": {
+          "type": "string",
+          "default": "kdef-lsp",
+          "description": "Path to the kdef-lsp language server binary"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npm run compile && npx @vscode/vsce package"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.75.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "@vscode/vsce": "^3.0.0"
   }
 }

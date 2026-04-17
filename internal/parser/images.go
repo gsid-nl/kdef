@@ -87,6 +87,49 @@ func parseImagesFromFile(filename string) (map[string]string, hcl.Diagnostics) {
 	return images, diags
 }
 
+// ScanImagesFromBytes parses images from raw bytes (for LSP, unsaved content).
+func ScanImagesFromBytes(src []byte, filename string) map[string]string {
+	images := make(map[string]string)
+
+	p := hclparse.NewParser()
+	file, diags := p.ParseHCL(src, filename)
+	if diags.HasErrors() {
+		return images
+	}
+
+	schema := &hcl.BodySchema{
+		Blocks: []hcl.BlockHeaderSchema{
+			{Type: "images"},
+		},
+	}
+
+	content, _, diags := file.Body.PartialContent(schema)
+	if diags.HasErrors() {
+		return images
+	}
+
+	for _, block := range content.Blocks {
+		if block.Type != "images" {
+			continue
+		}
+		attrs, moreDiags := block.Body.JustAttributes()
+		if moreDiags.HasErrors() {
+			continue
+		}
+		for name, attr := range attrs {
+			val, moreDiags := attr.Expr.Value(nil)
+			if moreDiags.HasErrors() {
+				continue
+			}
+			if val.Type() == cty.String {
+				images[name] = val.AsString()
+			}
+		}
+	}
+
+	return images
+}
+
 // ImageFunction returns a cty function that resolves image names to full references.
 func ImageFunction(images map[string]string) function.Function {
 	return function.New(&function.Spec{

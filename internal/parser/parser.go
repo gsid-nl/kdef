@@ -205,6 +205,9 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		}
 	}
 
+	// Validate cross-resource references (configmaps, secrets, PVCs)
+	validateReferences(config)
+
 	return config, nil
 }
 
@@ -308,6 +311,9 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	if err := validateNamespaces(merged, root); err != nil {
 		return nil, err
 	}
+
+	// Validate cross-resource references (configmaps, secrets, PVCs)
+	validateReferences(merged)
 
 	// Apply ingress defaults from root.kdef
 	if merged.IngressDefaults != nil {
@@ -425,6 +431,110 @@ func validateNamespaces(config *types.KdefConfig, root *types.RootConfig) error 
 	}
 
 	return nil
+}
+
+// validateReferences checks that all configmap, secret, and PVC references in
+// deployments and cronjobs point to resources that are actually defined.
+// Missing references are added as warnings (not errors) to config.Warnings.
+func validateReferences(config *types.KdefConfig) {
+	// Build lookup sets of defined resources
+	configMaps := make(map[string]bool)
+	for _, cm := range config.ConfigMaps {
+		configMaps[cm.Name] = true
+	}
+
+	secrets := make(map[string]bool)
+	for _, s := range config.Secrets {
+		secrets[s.Name] = true
+	}
+	for _, ss := range config.SealedSecrets {
+		secrets[ss.Name] = true
+	}
+
+	pvcs := make(map[string]bool)
+	for _, pvc := range config.PersistentVolumeClaims {
+		pvcs[pvc.Name] = true
+	}
+
+	seen := make(map[string]bool) // deduplicate warnings
+
+	warn := func(msg string) {
+		if !seen[msg] {
+			seen[msg] = true
+			config.Warnings = append(config.Warnings, msg)
+		}
+	}
+
+	// checkEnv validates env and env_from references for a workload.
+	checkEnv := func(kind, name string, env []types.EnvEntry, envFrom []types.EnvFromEntry) {
+		for _, e := range env {
+			if e.ConfigMapName != "" && !configMaps[e.ConfigMapName] {
+				warn(fmt.Sprintf("%s %q references configmap %q (env var %q) which is not defined", kind, name, e.ConfigMapName, e.Name))
+			}
+			if e.SecretName != "" && !secrets[e.SecretName] {
+				warn(fmt.Sprintf("%s %q references secret %q (env var %q) which is not defined", kind, name, e.SecretName, e.Name))
+			}
+		}
+		for _, ef := range envFrom {
+			if ef.ConfigMap != "" && !configMaps[ef.ConfigMap] {
+				warn(fmt.Sprintf("%s %q references configmap %q (env_from) which is not defined", kind, name, ef.ConfigMap))
+			}
+			if ef.Secret != "" && !secrets[ef.Secret] {
+				warn(fmt.Sprintf("%s %q references secret %q (env_from) which is not defined", kind, name, ef.Secret))
+			}
+		}
+	}
+
+	// checkVolumes validates volume source references for a workload.
+	checkVolumes := func(kind, name string, volumes []types.VolumeConfig) {
+		for _, v := range volumes {
+			if v.ConfigMap != "" && !configMaps[v.ConfigMap] {
+				warn(fmt.Sprintf("%s %q references configmap %q (volume %q) which is not defined", kind, name, v.ConfigMap, v.Name))
+			}
+			if v.Secret != "" && !secrets[v.Secret] {
+				warn(fmt.Sprintf("%s %q references secret %q (volume %q) which is not defined", kind, name, v.Secret, v.Name))
+			}
+			if v.PVC != "" && !pvcs[v.PVC] {
+				warn(fmt.Sprintf("%s %q references pvc %q (volume %q) which is not defined", kind, name, v.PVC, v.Name))
+			}
+		}
+	}
+
+	for _, dep := range config.Deployments {
+		checkVolumes("deployment", dep.Name, dep.Volumes)
+		for _, c := range dep.Containers {
+			checkEnv("deployment", dep.Name, c.Env, c.EnvFrom)
+			checkVolumes("deployment", dep.Name, c.Volumes)
+		}
+		for _, ic := range dep.InitContainers {
+			checkEnv("deployment", dep.Name, ic.Env, ic.EnvFrom)
+		}
+	}
+
+	for _, cj := range config.CronJobs {
+		checkEnv("cronjob", cj.Name, cj.Env, cj.EnvFrom)
+		checkVolumes("cronjob", cj.Name, cj.Volumes)
+	}
+}
+
+// validImagePullPolicies lists the Kubernetes-accepted values.
+var validImagePullPolicies = map[string]bool{
+	"Always":       true,
+	"IfNotPresent": true,
+	"Never":        true,
+}
+
+// validateImagePullPolicy returns an HCL diagnostic if the policy is invalid.
+func validateImagePullPolicy(policy string, attr *hcl.Attribute) *hcl.Diagnostic {
+	if policy == "" || validImagePullPolicies[policy] {
+		return nil
+	}
+	return &hcl.Diagnostic{
+		Severity: hcl.DiagError,
+		Summary:  fmt.Sprintf("invalid image_pull_policy %q", policy),
+		Detail:   "supported values: Always, IfNotPresent, Never",
+		Subject:  attr.Expr.Range().Ptr(),
+	}
 }
 
 // parseRootFile parses a root.kdef file and returns the RootConfig.

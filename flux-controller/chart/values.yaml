@@ -1,0 +1,22 @@
+image:
+  repository: ghcr.io/gsid-nl/kdef-controller
+  tag: ""  # defaults to appVersion
+  pullPolicy: IfNotPresent
+
+replicas: 1
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi
+
+serviceAccount:
+  create: true
+  name: kdef-controller
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

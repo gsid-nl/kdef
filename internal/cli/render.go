@@ -65,6 +65,11 @@ func runRender(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no blocks found in %s", renderDir)
 	}
 
+	// Print cross-resource reference warnings
+	for _, w := range config.Warnings {
+		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", w)
+	}
+
 	allManifests := generator.Generate(config)
 
 	if renderOutputDir != "" {
