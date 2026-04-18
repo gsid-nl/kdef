@@ -45,6 +45,8 @@ func GenerateStatefulSet(sts types.StatefulSetConfig) []Manifest {
 		ImagePullSecrets:   sts.ImagePullSecrets,
 		ServiceAccountName: sts.ServiceAccountName,
 		SecurityContext:    sts.SecurityContext,
+		NodeSelector:       sts.NodeSelector,
+		Tolerations:        sts.Tolerations,
 	}, claimNames)
 
 	serviceName := sts.ServiceName

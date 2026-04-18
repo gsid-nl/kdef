@@ -108,6 +108,9 @@ func renderStatefulSetBlock(group AppGroup) string {
 		b.WriteString("  }\n")
 	}
 
+	writeNodeSelector(&b, podSpec.NodeSelector)
+	writeTolerations(&b, podSpec.Tolerations)
+
 	if group.Service != nil {
 		renderServiceBlock(&b, group.Service, group.Name)
 	}

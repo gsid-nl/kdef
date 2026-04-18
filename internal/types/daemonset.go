@@ -13,6 +13,8 @@ type DaemonSetConfig struct {
 	InitContainers     []InitContainerConfig
 	Volumes            []VolumeConfig
 	SecurityContext    *SecurityContextConfig
+	NodeSelector       map[string]string
+	Tolerations        []TolerationConfig
 	Service            *ServiceConfig
 	Raw                string
 }

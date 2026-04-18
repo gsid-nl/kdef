@@ -178,6 +178,8 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		config.Secrets = append(config.Secrets, result.Secrets...)
 		config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
 		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
+		config.ClusterRoles = append(config.ClusterRoles, result.ClusterRoles...)
+		config.ClusterRoleBindings = append(config.ClusterRoleBindings, result.ClusterRoleBindings...)
 	}
 
 	// Phase 3: apply ingress defaults to all apps
@@ -251,6 +253,8 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	merged.Secrets = append(merged.Secrets, rootDefs.Secrets...)
 	merged.SealedSecrets = append(merged.SealedSecrets, rootDefs.SealedSecrets...)
 	merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, rootDefs.PersistentVolumeClaims...)
+	merged.ClusterRoles = append(merged.ClusterRoles, rootDefs.ClusterRoles...)
+	merged.ClusterRoleBindings = append(merged.ClusterRoleBindings, rootDefs.ClusterRoleBindings...)
 
 	for name, entry := range root.Deployments {
 		subDir := filepath.Join(filepath.Dir(rootFile), entry.Path)
@@ -311,6 +315,8 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 		merged.Secrets = append(merged.Secrets, config.Secrets...)
 		merged.SealedSecrets = append(merged.SealedSecrets, config.SealedSecrets...)
 		merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, config.PersistentVolumeClaims...)
+		merged.ClusterRoles = append(merged.ClusterRoles, config.ClusterRoles...)
+		merged.ClusterRoleBindings = append(merged.ClusterRoleBindings, config.ClusterRoleBindings...)
 	}
 
 	// Validate: every resource must have a namespace
@@ -884,6 +890,8 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 		config.Secrets = append(config.Secrets, result.Secrets...)
 		config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
 		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
+		config.ClusterRoles = append(config.ClusterRoles, result.ClusterRoles...)
+		config.ClusterRoleBindings = append(config.ClusterRoleBindings, result.ClusterRoleBindings...)
 	}
 
 	return config, nil

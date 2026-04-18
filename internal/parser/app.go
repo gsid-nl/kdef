@@ -43,6 +43,8 @@ type FileResult struct {
 	Secrets                []types.SecretConfig
 	SealedSecrets          []types.SealedSecretConfig
 	PersistentVolumeClaims []types.PersistentVolumeClaimConfig
+	ClusterRoles           []types.ClusterRoleConfig
+	ClusterRoleBindings    []types.ClusterRoleBindingConfig
 }
 
 func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnostics) {
@@ -62,6 +64,8 @@ func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnos
 		result.Secrets = append(result.Secrets, fr.Secrets...)
 		result.SealedSecrets = append(result.SealedSecrets, fr.SealedSecrets...)
 		result.PersistentVolumeClaims = append(result.PersistentVolumeClaims, fr.PersistentVolumeClaims...)
+		result.ClusterRoles = append(result.ClusterRoles, fr.ClusterRoles...)
+		result.ClusterRoleBindings = append(result.ClusterRoleBindings, fr.ClusterRoleBindings...)
 	}
 
 	// Pre-processing: extract and evaluate "if" blocks
@@ -92,6 +96,8 @@ var topLevelSchema = &hcl.BodySchema{
 		{Type: "secret", LabelNames: []string{"name"}},
 		{Type: "sealedsecret", LabelNames: []string{"name"}},
 		{Type: "persistentvolumeclaim", LabelNames: []string{"name"}},
+		{Type: "clusterrole", LabelNames: []string{"name"}},
+		{Type: "clusterrolebinding", LabelNames: []string{"name"}},
 		{Type: "images"},
 	},
 }
@@ -151,6 +157,18 @@ func parseBlocksFromBody(body hcl.Body, ctx *hcl.EvalContext, result *FileResult
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				result.PersistentVolumeClaims = append(result.PersistentVolumeClaims, pvc)
+			}
+		case "clusterrole":
+			cr, moreDiags := parseClusterRoleBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.ClusterRoles = append(result.ClusterRoles, cr)
+			}
+		case "clusterrolebinding":
+			crb, moreDiags := parseClusterRoleBindingBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.ClusterRoleBindings = append(result.ClusterRoleBindings, crb)
 			}
 		}
 	}
@@ -477,6 +495,8 @@ func parseEnvBlock(block *hcl.Block, ctx *hcl.EvalContext) ([]types.EnvEntry, hc
 		} else if val.Type().IsObjectType() && val.Type().HasAttribute("__configmap_name") {
 			entry.ConfigMapName = val.GetAttr("__configmap_name").AsString()
 			entry.ConfigMapKey = val.GetAttr("__configmap_key").AsString()
+		} else if val.Type().IsObjectType() && val.Type().HasAttribute("__field_path") {
+			entry.FieldPath = val.GetAttr("__field_path").AsString()
 		} else if val.Type() == cty.String {
 			entry.Value = val.AsString()
 		} else {
@@ -504,6 +524,7 @@ func parseVolumeBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.VolumeConfi
 			{Name: "empty_dir"},
 			{Name: "pvc"},
 			{Name: "host_path"},
+			{Name: "host_path_type"},
 		},
 	}
 
@@ -574,6 +595,14 @@ func parseVolumeBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.VolumeConfi
 		}
 	}
 
+	if attr, ok := content.Attributes["host_path_type"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			vol.HostPathType = val.AsString()
+		}
+	}
+
 	return vol, diags
 }
 
@@ -630,12 +659,22 @@ func parseSecurityContextBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Se
 			{Name: "run_as_non_root"},
 			{Name: "read_only_root"},
 			{Name: "fs_group"},
+			{Name: "privileged"},
 		},
 	}
 
 	content, diags := block.Body.Content(schema)
 	if diags.HasErrors() {
 		return sc, diags
+	}
+
+	if attr, ok := content.Attributes["privileged"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			b := val.True()
+			sc.Privileged = &b
+		}
 	}
 
 	if attr, ok := content.Attributes["run_as_user"]; ok {
@@ -750,6 +789,7 @@ func parseInitContainerBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Init
 			{Name: "image", Required: true},
 			{Name: "image_pull_policy"},
 			{Name: "command"},
+			{Name: "args"},
 			{Name: "volumes"},
 		},
 		Blocks: []hcl.BlockHeaderSchema{
@@ -788,6 +828,17 @@ func parseInitContainerBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Init
 			for it := val.ElementIterator(); it.Next(); {
 				_, v := it.Element()
 				ic.Command = append(ic.Command, v.AsString())
+			}
+		}
+	}
+
+	if attr, ok := content.Attributes["args"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			for it := val.ElementIterator(); it.Next(); {
+				_, v := it.Element()
+				ic.Args = append(ic.Args, v.AsString())
 			}
 		}
 	}

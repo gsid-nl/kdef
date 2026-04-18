@@ -15,6 +15,8 @@ type PodTemplateInput struct {
 	ImagePullSecrets   []string
 	ServiceAccountName string
 	SecurityContext    *types.SecurityContextConfig
+	NodeSelector       map[string]string
+	Tolerations        []types.TolerationConfig
 }
 
 // buildPodSpec assembles a PodSpec shared across workload kinds.
@@ -38,6 +40,9 @@ func buildPodSpec(in PodTemplateInput, extraClaimNames map[string]bool) corev1.P
 		}
 		if len(ic.Command) > 0 {
 			initC.Command = ic.Command
+		}
+		if len(ic.Args) > 0 {
+			initC.Args = ic.Args
 		}
 		for _, e := range ic.Env {
 			initC.Env = append(initC.Env, buildEnvVar(e))
@@ -92,6 +97,12 @@ func buildPodSpec(in PodTemplateInput, extraClaimNames map[string]bool) corev1.P
 		spec.SecurityContext = &corev1.PodSecurityContext{
 			FSGroup: in.SecurityContext.FSGroup,
 		}
+	}
+	if len(in.NodeSelector) > 0 {
+		spec.NodeSelector = in.NodeSelector
+	}
+	if tols := buildTolerations(in.Tolerations); len(tols) > 0 {
+		spec.Tolerations = tols
 	}
 	return spec
 }

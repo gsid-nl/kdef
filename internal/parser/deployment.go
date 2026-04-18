@@ -23,6 +23,7 @@ func parseDeploymentBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Deploym
 			{Name: "selector"},
 			{Name: "image_pull_secrets"},
 			{Name: "service_account"},
+			{Name: "node_selector"},
 			{Name: "raw"},
 		},
 		Blocks: []hcl.BlockHeaderSchema{
@@ -34,6 +35,7 @@ func parseDeploymentBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Deploym
 			{Type: "service"},
 			{Type: "ingress"},
 			{Type: "autoscale"},
+			{Type: "toleration"},
 		},
 	}
 
@@ -116,6 +118,15 @@ func parseDeploymentBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Deploym
 		}
 	}
 
+	// NodeSelector
+	if attr, ok := content.Attributes["node_selector"]; ok {
+		ns, moreDiags := parseNodeSelectorAttr(attr, ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			dep.NodeSelector = ns
+		}
+	}
+
 	// Process blocks
 	for _, b := range content.Blocks {
 		switch b.Type {
@@ -177,6 +188,12 @@ func parseDeploymentBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Deploym
 			if !moreDiags.HasErrors() {
 				dep.Autoscale = &as
 			}
+		case "toleration":
+			t, moreDiags := parseTolerationBlock(b, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				dep.Tolerations = append(dep.Tolerations, t)
+			}
 		}
 	}
 
@@ -193,6 +210,7 @@ func parseContainerBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Containe
 			{Name: "image", Required: true},
 			{Name: "image_pull_policy"},
 			{Name: "command"},
+			{Name: "args"},
 			{Name: "working_dir"},
 		},
 		Blocks: []hcl.BlockHeaderSchema{
@@ -234,6 +252,17 @@ func parseContainerBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Containe
 			for it := val.ElementIterator(); it.Next(); {
 				_, v := it.Element()
 				c.Command = append(c.Command, v.AsString())
+			}
+		}
+	}
+
+	if attr, ok := content.Attributes["args"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			for it := val.ElementIterator(); it.Next(); {
+				_, v := it.Element()
+				c.Args = append(c.Args, v.AsString())
 			}
 		}
 	}

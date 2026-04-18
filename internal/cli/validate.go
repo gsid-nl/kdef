@@ -69,8 +69,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", w)
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "valid: %d namespace(s), %d service_account(s), %d deployment(s), %d daemonset(s), %d statefulset(s), %d cronjob(s), %d configmap(s), %d secret(s), %d sealedsecret(s), %d pvc(s) in %s\n",
-		len(config.Namespaces), len(config.ServiceAccounts), len(config.Deployments), len(config.DaemonSets), len(config.StatefulSets), len(config.CronJobs), len(config.ConfigMaps), len(config.Secrets), len(config.SealedSecrets), len(config.PersistentVolumeClaims), validateDir)
+	fmt.Fprintf(cmd.OutOrStdout(), "valid: %d namespace(s), %d service_account(s), %d deployment(s), %d daemonset(s), %d statefulset(s), %d cronjob(s), %d configmap(s), %d secret(s), %d sealedsecret(s), %d pvc(s), %d clusterrole(s), %d clusterrolebinding(s) in %s\n",
+		len(config.Namespaces), len(config.ServiceAccounts), len(config.Deployments), len(config.DaemonSets), len(config.StatefulSets), len(config.CronJobs), len(config.ConfigMaps), len(config.Secrets), len(config.SealedSecrets), len(config.PersistentVolumeClaims), len(config.ClusterRoles), len(config.ClusterRoleBindings), validateDir)
 	return nil
 }
 

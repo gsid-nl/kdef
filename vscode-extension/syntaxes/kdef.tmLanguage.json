@@ -46,21 +46,21 @@
       "patterns": [
         {
           "comment": "Top-level block types",
-          "match": "^\\s*(deployment|daemonset|statefulset|cronjob|configmap|secret|sealedsecret|persistentvolumeclaim|variable|for|if)\\b",
+          "match": "^\\s*(deployment|daemonset|statefulset|cronjob|configmap|secret|sealedsecret|persistentvolumeclaim|clusterrole|clusterrolebinding|variable|for|if)\\b",
           "captures": {
             "1": { "name": "keyword.declaration.kdef" }
           }
         },
         {
           "comment": "Nested block types",
-          "match": "^\\s*(container|init|service|ingress|scale|resources|env|env_from|volume|volume_claim|security_context|autoscale|ingress_defaults|service_account|override|use_vars|annotations|port|data)\\b",
+          "match": "^\\s*(container|init|service|ingress|scale|resources|env|env_from|volume|volume_claim|security_context|autoscale|ingress_defaults|service_account|override|use_vars|annotations|port|data|toleration|rule|role_ref|subject)\\b",
           "captures": {
             "1": { "name": "keyword.other.block.kdef" }
           }
         },
         {
           "comment": "Block labels (quoted strings after block type)",
-          "match": "(?<=deployment|daemonset|statefulset|cronjob|configmap|secret|sealedsecret|persistentvolumeclaim|container|init|volume|volume_claim|port|variable|for|override|service_account)\\s+(\"[^\"]*\")",
+          "match": "(?<=deployment|daemonset|statefulset|cronjob|configmap|secret|sealedsecret|persistentvolumeclaim|clusterrole|clusterrolebinding|container|init|volume|volume_claim|port|variable|for|override|service_account)\\s+(\"[^\"]*\")",
           "captures": {
             "1": { "name": "entity.name.type.kdef" }
           }
@@ -71,7 +71,7 @@
       "patterns": [
         {
           "comment": "Known attribute names",
-          "match": "^\\s*(image|image_pull_policy|image_pull_secrets|namespace|name|command|schedule|concurrency|deadline|restart|container_name|service_account|selector|labels|host|hosts|tls|tls_secret|issuer|service_name|pod_management_policy|mount_path|sub_path|read_only|secret|config_map|empty_dir|pvc|host_path|health|ready|tcp_health|tcp_ready|initial_delay|period|timeout|failures|successes|cpu|memory|ephemeral_storage|target|type|prefix|condition|import|raw|run_as_user|run_as_group|run_as_non_root|read_only_root|fs_group|min|max|replicas|volumes|storage_class|access_modes|storage|deployments)\\s*=",
+          "match": "^\\s*(image|image_pull_policy|image_pull_secrets|namespace|name|command|args|schedule|concurrency|deadline|restart|container_name|service_account|selector|labels|host|hosts|tls|tls_secret|issuer|service_name|pod_management_policy|node_selector|mount_path|sub_path|read_only|secret|config_map|empty_dir|pvc|host_path|host_path_type|health|ready|tcp_health|tcp_ready|initial_delay|period|timeout|failures|successes|cpu|memory|ephemeral_storage|target|type|prefix|condition|import|raw|run_as_user|run_as_group|run_as_non_root|read_only_root|fs_group|privileged|min|max|replicas|volumes|storage_class|access_modes|storage|deployments|key|operator|value|effect|toleration_seconds|kind|api_groups|resources|resource_names|verbs|non_resource_urls)\\s*=",
           "captures": {
             "1": { "name": "variable.other.property.kdef" }
           }
@@ -89,7 +89,7 @@
       "patterns": [
         {
           "comment": "Built-in functions",
-          "match": "\\b(secret|file|match)\\s*\\(",
+          "match": "\\b(secret|configmap|field_ref|file|image|match)\\s*\\(",
           "captures": {
             "1": { "name": "support.function.builtin.kdef" }
           }

@@ -18,21 +18,28 @@ func kdefLabels(labels map[string]string) map[string]string {
 
 func buildEnvVar(e types.EnvEntry) corev1.EnvVar {
 	envVar := corev1.EnvVar{Name: e.Name}
-	if e.SecretName != "" {
+	switch {
+	case e.SecretName != "":
 		envVar.ValueFrom = &corev1.EnvVarSource{
 			SecretKeyRef: &corev1.SecretKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{Name: e.SecretName},
 				Key:                  e.SecretKey,
 			},
 		}
-	} else if e.ConfigMapName != "" {
+	case e.ConfigMapName != "":
 		envVar.ValueFrom = &corev1.EnvVarSource{
 			ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{Name: e.ConfigMapName},
 				Key:                  e.ConfigMapKey,
 			},
 		}
-	} else {
+	case e.FieldPath != "":
+		envVar.ValueFrom = &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: e.FieldPath,
+			},
+		}
+	default:
 		envVar.Value = e.Value
 	}
 	return envVar
@@ -119,11 +126,12 @@ func buildVolume(v types.VolumeConfig) corev1.Volume {
 			},
 		}
 	case v.HostPath != "":
-		vol.VolumeSource = corev1.VolumeSource{
-			HostPath: &corev1.HostPathVolumeSource{
-				Path: v.HostPath,
-			},
+		hp := &corev1.HostPathVolumeSource{Path: v.HostPath}
+		if v.HostPathType != "" {
+			t := corev1.HostPathType(v.HostPathType)
+			hp.Type = &t
 		}
+		vol.VolumeSource = corev1.VolumeSource{HostPath: hp}
 	}
 	return vol
 }
@@ -150,7 +158,31 @@ func buildSecurityContext(sc *types.SecurityContextConfig) *corev1.SecurityConte
 	if sc.ReadOnlyRoot != nil {
 		ctx.ReadOnlyRootFilesystem = sc.ReadOnlyRoot
 	}
+	if sc.Privileged != nil {
+		ctx.Privileged = sc.Privileged
+	}
 	return ctx
+}
+
+// buildTolerations converts kdef TolerationConfig entries into corev1.Toleration.
+func buildTolerations(ts []types.TolerationConfig) []corev1.Toleration {
+	if len(ts) == 0 {
+		return nil
+	}
+	result := make([]corev1.Toleration, 0, len(ts))
+	for _, t := range ts {
+		tol := corev1.Toleration{
+			Key:      t.Key,
+			Operator: corev1.TolerationOperator(t.Operator),
+			Value:    t.Value,
+			Effect:   corev1.TaintEffect(t.Effect),
+		}
+		if t.TolerationSeconds != nil {
+			tol.TolerationSeconds = t.TolerationSeconds
+		}
+		result = append(result, tol)
+	}
+	return result
 }
 
 func applyProbeTuning(probe *corev1.Probe, p types.PortConfig) {

@@ -22,6 +22,7 @@ func parseStatefulSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Statef
 			{Name: "service_account"},
 			{Name: "service_name"},
 			{Name: "pod_management_policy"},
+			{Name: "node_selector"},
 			{Name: "raw"},
 		},
 		Blocks: []hcl.BlockHeaderSchema{
@@ -33,6 +34,7 @@ func parseStatefulSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Statef
 			{Type: "security_context"},
 			{Type: "service"},
 			{Type: "ingress"},
+			{Type: "toleration"},
 		},
 	}
 
@@ -124,6 +126,14 @@ func parseStatefulSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Statef
 		}
 	}
 
+	if attr, ok := content.Attributes["node_selector"]; ok {
+		ns, moreDiags := parseNodeSelectorAttr(attr, ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			sts.NodeSelector = ns
+		}
+	}
+
 	for _, b := range content.Blocks {
 		switch b.Type {
 		case "container":
@@ -183,6 +193,12 @@ func parseStatefulSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Statef
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				sts.Ingress = &ing
+			}
+		case "toleration":
+			t, moreDiags := parseTolerationBlock(b, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				sts.Tolerations = append(sts.Tolerations, t)
 			}
 		}
 	}

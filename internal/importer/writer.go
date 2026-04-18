@@ -43,6 +43,19 @@ func WriteKdefFiles(result ImportResult, outputDir string) error {
 		fmt.Printf("wrote %s\n", path)
 	}
 
+	// Write ClusterRoles + Bindings into one rbac.kdef
+	if len(result.ClusterRoles) > 0 || len(result.ClusterRoleBindings) > 0 {
+		var parts []string
+		parts = append(parts, result.ClusterRoles...)
+		parts = append(parts, result.ClusterRoleBindings...)
+		content := strings.Join(parts, "\n")
+		path := filepath.Join(outputDir, "rbac.kdef")
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			return fmt.Errorf("write rbac.kdef: %w", err)
+		}
+		fmt.Printf("wrote %s\n", path)
+	}
+
 	// Write cronjobs — all in one file
 	if len(result.CronJobs) > 0 {
 		content := strings.Join(result.CronJobs, "\n")
@@ -109,6 +122,14 @@ func PrintKdef(result ImportResult) {
 		fmt.Print(block)
 	}
 	for _, block := range result.PersistentVolumeClaims {
+		fmt.Println()
+		fmt.Print(block)
+	}
+	for _, block := range result.ClusterRoles {
+		fmt.Println()
+		fmt.Print(block)
+	}
+	for _, block := range result.ClusterRoleBindings {
 		fmt.Println()
 		fmt.Print(block)
 	}

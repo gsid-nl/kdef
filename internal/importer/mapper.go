@@ -29,6 +29,8 @@ type ImportResult struct {
 	CronJobs               []string // rendered kdef cronjob blocks
 	ConfigMaps             []string // rendered kdef configmap blocks
 	PersistentVolumeClaims []string // rendered kdef persistentvolumeclaim blocks
+	ClusterRoles           []string // rendered kdef clusterrole blocks
+	ClusterRoleBindings    []string // rendered kdef clusterrolebinding blocks
 }
 
 // MapToKdef converts cluster resources to kdef syntax strings.
@@ -61,6 +63,16 @@ func MapToKdef(resources *ClusterResources) ImportResult {
 	// PersistentVolumeClaims
 	for _, pvc := range resources.PersistentVolumeClaims {
 		result.PersistentVolumeClaims = append(result.PersistentVolumeClaims, renderPersistentVolumeClaimBlock(pvc))
+	}
+
+	// ClusterRoles
+	for _, cr := range resources.ClusterRoles {
+		result.ClusterRoles = append(result.ClusterRoles, renderClusterRoleBlock(cr))
+	}
+
+	// ClusterRoleBindings
+	for _, crb := range resources.ClusterRoleBindings {
+		result.ClusterRoleBindings = append(result.ClusterRoleBindings, renderClusterRoleBindingBlock(crb))
 	}
 
 	return result
@@ -251,6 +263,50 @@ func writeCommandMultiLine(b *strings.Builder, command []string, indent string) 
 	b.WriteString(fmt.Sprintf("%s]\n", indent))
 }
 
+func writeTolerations(b *strings.Builder, tols []corev1.Toleration) {
+	for _, t := range tols {
+		b.WriteString("\n  toleration {\n")
+		if t.Key != "" {
+			b.WriteString(fmt.Sprintf("    key      = %q\n", t.Key))
+		}
+		if t.Operator != "" {
+			b.WriteString(fmt.Sprintf("    operator = %q\n", string(t.Operator)))
+		}
+		if t.Value != "" {
+			b.WriteString(fmt.Sprintf("    value    = %q\n", t.Value))
+		}
+		if t.Effect != "" {
+			b.WriteString(fmt.Sprintf("    effect   = %q\n", string(t.Effect)))
+		}
+		if t.TolerationSeconds != nil {
+			b.WriteString(fmt.Sprintf("    toleration_seconds = %d\n", *t.TolerationSeconds))
+		}
+		b.WriteString("  }\n")
+	}
+}
+
+func writeNodeSelector(b *strings.Builder, ns map[string]string) {
+	if len(ns) == 0 {
+		return
+	}
+	b.WriteString("  node_selector = {\n")
+	for _, k := range sortedKeys(ns) {
+		b.WriteString(fmt.Sprintf("    %q = %q\n", k, ns[k]))
+	}
+	b.WriteString("  }\n")
+}
+
+func writeArgsMultiLine(b *strings.Builder, args []string, indent string) {
+	if len(args) == 0 {
+		return
+	}
+	b.WriteString(fmt.Sprintf("%sargs = [\n", indent))
+	for _, a := range args {
+		b.WriteString(fmt.Sprintf("%s  %q,\n", indent, a))
+	}
+	b.WriteString(fmt.Sprintf("%s]\n", indent))
+}
+
 func writeResources(b *strings.Builder, c corev1.Container, indent ...string) {
 	ind := "  "
 	if len(indent) > 0 {
@@ -301,13 +357,17 @@ func writeEnv(b *strings.Builder, c corev1.Container, indent ...string) {
 	inner := ind + "  "
 	b.WriteString(fmt.Sprintf("\n%senv {\n", ind))
 	for _, e := range c.Env {
-		if e.ValueFrom != nil && e.ValueFrom.SecretKeyRef != nil {
+		switch {
+		case e.ValueFrom != nil && e.ValueFrom.SecretKeyRef != nil:
 			b.WriteString(fmt.Sprintf("%s%s = secret(%q, %q)\n",
 				inner, e.Name, e.ValueFrom.SecretKeyRef.Name, e.ValueFrom.SecretKeyRef.Key))
-		} else if e.ValueFrom != nil && e.ValueFrom.ConfigMapKeyRef != nil {
+		case e.ValueFrom != nil && e.ValueFrom.ConfigMapKeyRef != nil:
 			b.WriteString(fmt.Sprintf("%s%s = configmap(%q, %q)\n",
 				inner, e.Name, e.ValueFrom.ConfigMapKeyRef.Name, e.ValueFrom.ConfigMapKeyRef.Key))
-		} else {
+		case e.ValueFrom != nil && e.ValueFrom.FieldRef != nil:
+			b.WriteString(fmt.Sprintf("%s%s = field_ref(%q)\n",
+				inner, e.Name, e.ValueFrom.FieldRef.FieldPath))
+		default:
 			b.WriteString(fmt.Sprintf("%s%s = %q\n", inner, e.Name, e.Value))
 		}
 	}
@@ -534,6 +594,9 @@ func writeVolumes(b *strings.Builder, volumes []corev1.Volume, mounts []corev1.V
 			b.WriteString(fmt.Sprintf("%spvc = %q\n", inner, vol.PersistentVolumeClaim.ClaimName))
 		case vol.HostPath != nil:
 			b.WriteString(fmt.Sprintf("%shost_path = %q\n", inner, vol.HostPath.Path))
+			if vol.HostPath.Type != nil && *vol.HostPath.Type != "" {
+				b.WriteString(fmt.Sprintf("%shost_path_type = %q\n", inner, string(*vol.HostPath.Type)))
+			}
 		}
 
 		b.WriteString(fmt.Sprintf("%s}\n", ind))
@@ -569,6 +632,10 @@ func writeSecurityContext(b *strings.Builder, containerSC *corev1.SecurityContex
 		}
 		if containerSC.ReadOnlyRootFilesystem != nil && *containerSC.ReadOnlyRootFilesystem {
 			sc.WriteString(fmt.Sprintf("%sread_only_root  = true\n", inner))
+			hasContent = true
+		}
+		if containerSC.Privileged != nil && *containerSC.Privileged {
+			sc.WriteString(fmt.Sprintf("%sprivileged      = true\n", inner))
 			hasContent = true
 		}
 	}

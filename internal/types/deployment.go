@@ -14,6 +14,8 @@ type DeploymentConfig struct {
 	InitContainers     []InitContainerConfig
 	Volumes            []VolumeConfig
 	SecurityContext    *SecurityContextConfig // pod-level
+	NodeSelector       map[string]string
+	Tolerations        []TolerationConfig
 	Service            *ServiceConfig
 	Ingress            *IngressConfig
 	Autoscale          *AutoscaleConfig
@@ -26,6 +28,7 @@ type ContainerConfig struct {
 	Image           string
 	ImagePullPolicy string
 	Command         []string
+	Args            []string
 	WorkingDir      string
 	Ports           []PortConfig
 	Env             []EnvEntry

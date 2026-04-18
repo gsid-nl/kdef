@@ -10,12 +10,15 @@ type CronJobConfig struct {
 	ImagePullSecrets   []string
 	ServiceAccountName string
 	Command            []string
+	Args               []string
 	Schedule           string
 	Env                []EnvEntry
 	EnvFrom            []EnvFromEntry
 	Resources          *ResourcesConfig
 	Volumes            []VolumeConfig
 	SecurityContext    *SecurityContextConfig
+	NodeSelector       map[string]string
+	Tolerations        []TolerationConfig
 	Concurrency        string // "Allow", "Forbid", "Replace"
 	Deadline           string // e.g. "4m"
 	Restart            string // "OnFailure", "Never" (default: "OnFailure")

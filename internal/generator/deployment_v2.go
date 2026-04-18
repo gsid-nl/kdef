@@ -110,6 +110,12 @@ func GenerateDeploymentV2(dep types.DeploymentConfig) []Manifest {
 			FSGroup: dep.SecurityContext.FSGroup,
 		}
 	}
+	if len(dep.NodeSelector) > 0 {
+		spec.NodeSelector = dep.NodeSelector
+	}
+	if tols := buildTolerations(dep.Tolerations); len(tols) > 0 {
+		spec.Tolerations = tols
+	}
 
 	// Deployment
 	k8sDep := &appsv1.Deployment{
@@ -245,6 +251,9 @@ func buildContainerV2(c types.ContainerConfig) corev1.Container {
 	}
 	if len(c.Command) > 0 {
 		container.Command = c.Command
+	}
+	if len(c.Args) > 0 {
+		container.Args = c.Args
 	}
 	if c.WorkingDir != "" {
 		container.WorkingDir = c.WorkingDir

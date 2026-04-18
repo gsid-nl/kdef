@@ -61,7 +61,7 @@ func runRender(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("parse: %w", err)
 	}
 
-	if len(config.Deployments) == 0 && len(config.DaemonSets) == 0 && len(config.StatefulSets) == 0 && len(config.CronJobs) == 0 && len(config.ConfigMaps) == 0 && len(config.Secrets) == 0 && len(config.SealedSecrets) == 0 && len(config.PersistentVolumeClaims) == 0 {
+	if len(config.Deployments) == 0 && len(config.DaemonSets) == 0 && len(config.StatefulSets) == 0 && len(config.CronJobs) == 0 && len(config.ConfigMaps) == 0 && len(config.Secrets) == 0 && len(config.SealedSecrets) == 0 && len(config.PersistentVolumeClaims) == 0 && len(config.ClusterRoles) == 0 && len(config.ClusterRoleBindings) == 0 {
 		return fmt.Errorf("no blocks found in %s", renderDir)
 	}
 

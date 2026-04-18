@@ -37,6 +37,8 @@ func GenerateDaemonSet(ds types.DaemonSetConfig) []Manifest {
 		ImagePullSecrets:   ds.ImagePullSecrets,
 		ServiceAccountName: ds.ServiceAccountName,
 		SecurityContext:    ds.SecurityContext,
+		NodeSelector:       ds.NodeSelector,
+		Tolerations:        ds.Tolerations,
 	}, nil)
 
 	k8sDS := &appsv1.DaemonSet{

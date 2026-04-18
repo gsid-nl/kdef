@@ -137,6 +137,52 @@
       "}"
     ]
   },
+  "Toleration": {
+    "prefix": "toleration",
+    "description": "Pod toleration for node taints",
+    "body": [
+      "toleration {",
+      "  key      = \"${1:key}\"",
+      "  operator = \"${2|Equal,Exists|}\"",
+      "  value    = \"${3:value}\"",
+      "  effect   = \"${4|NoSchedule,PreferNoSchedule,NoExecute|}\"",
+      "}"
+    ]
+  },
+  "ClusterRole": {
+    "prefix": "clusterrole",
+    "description": "Kubernetes ClusterRole (cluster-scoped RBAC)",
+    "body": [
+      "clusterrole \"${1:name}\" {",
+      "  rule {",
+      "    api_groups = [\"${2:}\"]",
+      "    resources  = [\"${3:pods}\"]",
+      "    verbs      = [\"${4:get}\", \"${5:list}\", \"${6:watch}\"]",
+      "  }",
+      "}"
+    ]
+  },
+  "ClusterRoleBinding": {
+    "prefix": "clusterrolebinding",
+    "description": "Bind a ClusterRole to a ServiceAccount",
+    "body": [
+      "clusterrolebinding \"${1:name}\" {",
+      "  role_ref {",
+      "    name = \"${2:clusterrole-name}\"",
+      "  }",
+      "",
+      "  subject {",
+      "    name      = \"${3:sa-name}\"",
+      "    namespace = \"${4:namespace}\"",
+      "  }",
+      "}"
+    ]
+  },
+  "Field Ref": {
+    "prefix": "field_ref",
+    "description": "Downward API env reference",
+    "body": "field_ref(\"${1|spec.nodeName,metadata.name,metadata.namespace,status.podIP,status.hostIP|}\")"
+  },
   "StatefulSet": {
     "prefix": "statefulset",
     "description": "Create a new statefulset block with per-pod storage",

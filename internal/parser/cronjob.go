@@ -22,6 +22,8 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 			{Name: "image_pull_secrets"},
 			{Name: "service_account"},
 			{Name: "command"},
+			{Name: "args"},
+			{Name: "node_selector"},
 			{Name: "concurrency"},
 			{Name: "deadline"},
 			{Name: "restart"},
@@ -32,6 +34,7 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 			{Type: "resources"},
 			{Type: "volume", LabelNames: []string{"name"}},
 			{Type: "security_context"},
+			{Type: "toleration"},
 		},
 	}
 
@@ -94,6 +97,27 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 		}
 	}
 
+	// Args (list of strings)
+	if attr, ok := content.Attributes["args"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			for it := val.ElementIterator(); it.Next(); {
+				_, v := it.Element()
+				cj.Args = append(cj.Args, v.AsString())
+			}
+		}
+	}
+
+	// NodeSelector
+	if attr, ok := content.Attributes["node_selector"]; ok {
+		ns, moreDiags := parseNodeSelectorAttr(attr, ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			cj.NodeSelector = ns
+		}
+	}
+
 	// ImagePullSecrets (list of strings)
 	if attr, ok := content.Attributes["image_pull_secrets"]; ok {
 		val, moreDiags := attr.Expr.Value(ctx)
@@ -138,6 +162,12 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				cj.SecurityContext = &sc
+			}
+		case "toleration":
+			t, moreDiags := parseTolerationBlock(b, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				cj.Tolerations = append(cj.Tolerations, t)
 			}
 		}
 	}

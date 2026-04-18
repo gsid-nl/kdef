@@ -38,6 +38,10 @@ rules:
   - apiGroups: ["cert-manager.io"]
     resources: ["certificates"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Cluster-scoped RBAC that kdef may generate
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterroles", "clusterrolebindings"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   # Events
   - apiGroups: [""]
     resources: ["events"]

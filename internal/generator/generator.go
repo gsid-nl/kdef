@@ -57,6 +57,12 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 	for _, pvc := range config.PersistentVolumeClaims {
 		result["pvc-"+pvc.Name] = []Manifest{{Object: GeneratePersistentVolumeClaim(pvc)}}
 	}
+	for _, cr := range config.ClusterRoles {
+		result["clusterrole-"+cr.Name] = []Manifest{{Object: GenerateClusterRole(cr)}}
+	}
+	for _, crb := range config.ClusterRoleBindings {
+		result["clusterrolebinding-"+crb.Name] = []Manifest{{Object: GenerateClusterRoleBinding(crb)}}
+	}
 	return result
 }
 

@@ -17,6 +17,8 @@ type StatefulSetConfig struct {
 	Volumes             []VolumeConfig
 	VolumeClaims        []VolumeClaimTemplate
 	SecurityContext     *SecurityContextConfig
+	NodeSelector        map[string]string
+	Tolerations         []TolerationConfig
 	Service             *ServiceConfig
 	Ingress             *IngressConfig
 	Raw                 string

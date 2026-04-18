@@ -11,6 +11,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -54,6 +55,8 @@ type ClusterResources struct {
 	CronJobs               []batchv1.CronJob
 	ConfigMaps             []corev1.ConfigMap
 	PersistentVolumeClaims []corev1.PersistentVolumeClaim
+	ClusterRoles           []rbacv1.ClusterRole
+	ClusterRoleBindings    []rbacv1.ClusterRoleBinding
 }
 
 // ReadFromCluster reads resources from the current kubectl context.
@@ -241,6 +244,16 @@ func ReadFromFile(filename string) (*ClusterResources, error) {
 			if err := json.Unmarshal(jsonData, &pvc); err == nil {
 				resources.PersistentVolumeClaims = append(resources.PersistentVolumeClaims, pvc)
 			}
+		case "ClusterRole":
+			var cr rbacv1.ClusterRole
+			if err := json.Unmarshal(jsonData, &cr); err == nil {
+				resources.ClusterRoles = append(resources.ClusterRoles, cr)
+			}
+		case "ClusterRoleBinding":
+			var crb rbacv1.ClusterRoleBinding
+			if err := json.Unmarshal(jsonData, &crb); err == nil {
+				resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, crb)
+			}
 		}
 	}
 
@@ -334,5 +347,11 @@ func cleanAllResources(r *ClusterResources) {
 	}
 	for i := range r.PersistentVolumeClaims {
 		cleanMetadata(&r.PersistentVolumeClaims[i].ObjectMeta)
+	}
+	for i := range r.ClusterRoles {
+		cleanMetadata(&r.ClusterRoles[i].ObjectMeta)
+	}
+	for i := range r.ClusterRoleBindings {
+		cleanMetadata(&r.ClusterRoleBindings[i].ObjectMeta)
 	}
 }

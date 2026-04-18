@@ -19,6 +19,7 @@ func parseDaemonSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.DaemonSe
 			{Name: "selector"},
 			{Name: "image_pull_secrets"},
 			{Name: "service_account"},
+			{Name: "node_selector"},
 			{Name: "raw"},
 		},
 		Blocks: []hcl.BlockHeaderSchema{
@@ -27,6 +28,7 @@ func parseDaemonSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.DaemonSe
 			{Type: "volume", LabelNames: []string{"name"}},
 			{Type: "security_context"},
 			{Type: "service"},
+			{Type: "toleration"},
 		},
 	}
 
@@ -102,6 +104,14 @@ func parseDaemonSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.DaemonSe
 		}
 	}
 
+	if attr, ok := content.Attributes["node_selector"]; ok {
+		ns, moreDiags := parseNodeSelectorAttr(attr, ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			ds.NodeSelector = ns
+		}
+	}
+
 	for _, b := range content.Blocks {
 		switch b.Type {
 		case "container":
@@ -133,6 +143,12 @@ func parseDaemonSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.DaemonSe
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				ds.Service = &svc
+			}
+		case "toleration":
+			t, moreDiags := parseTolerationBlock(b, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				ds.Tolerations = append(ds.Tolerations, t)
 			}
 		}
 	}
