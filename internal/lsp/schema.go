@@ -29,6 +29,7 @@ type FuncSchema struct {
 var builtinFunctions = []FuncSchema{
 	{Name: "secret", Signature: `secret("secret-name", "key")`, Doc: "Reference a Kubernetes Secret key (generates valueFrom.secretKeyRef)"},
 	{Name: "configmap", Signature: `configmap("configmap-name", "key")`, Doc: "Reference a ConfigMap key (generates valueFrom.configMapKeyRef)"},
+	{Name: "field_ref", Signature: `field_ref("spec.nodeName")`, Doc: "Downward-API reference (generates valueFrom.fieldRef)"},
 	{Name: "file", Signature: `file("path")`, Doc: "Read file contents (resolved relative to project directory)"},
 	{Name: "image", Signature: `image("name")`, Doc: "Resolve an image alias from an images {} block"},
 }
@@ -42,6 +43,8 @@ var topLevelBlocks = []BlockSchema{
 	secretBlockSchema,
 	sealedSecretSchema,
 	pvcSchema,
+	clusterRoleSchema,
+	clusterRoleBindingSchema,
 	imagesSchema,
 }
 
@@ -55,6 +58,7 @@ var deploymentSchema = BlockSchema{
 		{Name: "selector", Doc: "Custom label selector (map)"},
 		{Name: "image_pull_secrets", Doc: "List of image pull secret names"},
 		{Name: "service_account", Doc: "ServiceAccount name"},
+		{Name: "node_selector", Doc: "Node labels required for scheduling (map)"},
 		{Name: "raw", Doc: "Raw YAML to deep-merge into the manifest"},
 	},
 	SubBlocks: []BlockSchema{
@@ -67,6 +71,7 @@ var deploymentSchema = BlockSchema{
 		serviceSchema,
 		ingressSchema,
 		autoscaleSchema,
+		tolerationSchema,
 	},
 }
 
@@ -80,6 +85,7 @@ var daemonsetSchema = BlockSchema{
 		{Name: "selector", Doc: "Custom label selector (map)"},
 		{Name: "image_pull_secrets", Doc: "List of image pull secret names"},
 		{Name: "service_account", Doc: "ServiceAccount name"},
+		{Name: "node_selector", Doc: "Node labels required for scheduling (map)"},
 		{Name: "raw", Doc: "Raw YAML to deep-merge into the manifest"},
 	},
 	SubBlocks: []BlockSchema{
@@ -88,6 +94,7 @@ var daemonsetSchema = BlockSchema{
 		volumeSchema,
 		securityContextSchema,
 		serviceSchema,
+		tolerationSchema,
 	},
 }
 
@@ -103,6 +110,7 @@ var statefulsetSchema = BlockSchema{
 		{Name: "service_account", Doc: "ServiceAccount name"},
 		{Name: "service_name", Doc: "Governing headless Service name (required by K8s)"},
 		{Name: "pod_management_policy", Doc: "Pod management policy: OrderedReady (default), Parallel"},
+		{Name: "node_selector", Doc: "Node labels required for scheduling (map)"},
 		{Name: "raw", Doc: "Raw YAML to deep-merge into the manifest"},
 	},
 	SubBlocks: []BlockSchema{
@@ -114,6 +122,69 @@ var statefulsetSchema = BlockSchema{
 		securityContextSchema,
 		serviceSchema,
 		ingressSchema,
+		tolerationSchema,
+	},
+}
+
+var tolerationSchema = BlockSchema{
+	Type: "toleration",
+	Doc:  "Pod toleration for node taints",
+	Attributes: []AttrSchema{
+		{Name: "key", Doc: "Taint key to tolerate"},
+		{Name: "operator", Doc: `"Equal" (default) or "Exists"`},
+		{Name: "value", Doc: "Taint value (for Equal operator)"},
+		{Name: "effect", Doc: `"NoSchedule", "PreferNoSchedule", "NoExecute"`},
+		{Name: "toleration_seconds", Doc: "How long to tolerate NoExecute (seconds)"},
+	},
+}
+
+var clusterRoleSchema = BlockSchema{
+	Type:   "clusterrole",
+	Labels: 1,
+	Doc:    "Kubernetes ClusterRole (cluster-scoped RBAC)",
+	SubBlocks: []BlockSchema{
+		policyRuleSchema,
+	},
+}
+
+var policyRuleSchema = BlockSchema{
+	Type: "rule",
+	Doc:  "ClusterRole / Role policy rule",
+	Attributes: []AttrSchema{
+		{Name: "api_groups", Doc: "API groups (use [\"\"] for core)"},
+		{Name: "resources", Doc: "Resource types (e.g. [\"pods\", \"nodes\"])"},
+		{Name: "resource_names", Doc: "Optional named resource restrictions"},
+		{Name: "verbs", Doc: "Verbs (e.g. [\"get\", \"list\", \"watch\"])", Required: true},
+		{Name: "non_resource_urls", Doc: "Non-resource URLs (e.g. [\"/metrics\"])"},
+	},
+}
+
+var clusterRoleBindingSchema = BlockSchema{
+	Type:   "clusterrolebinding",
+	Labels: 1,
+	Doc:    "Kubernetes ClusterRoleBinding",
+	SubBlocks: []BlockSchema{
+		roleRefSchema,
+		subjectSchema,
+	},
+}
+
+var roleRefSchema = BlockSchema{
+	Type: "role_ref",
+	Doc:  "Reference to a ClusterRole or Role",
+	Attributes: []AttrSchema{
+		{Name: "kind", Doc: `"ClusterRole" (default) or "Role"`},
+		{Name: "name", Doc: "Role name", Required: true},
+	},
+}
+
+var subjectSchema = BlockSchema{
+	Type: "subject",
+	Doc:  "Binding subject (ServiceAccount, User, or Group)",
+	Attributes: []AttrSchema{
+		{Name: "kind", Doc: `"ServiceAccount" (default), "User", or "Group"`},
+		{Name: "name", Doc: "Subject name", Required: true},
+		{Name: "namespace", Doc: "Namespace (required for ServiceAccount kind)"},
 	},
 }
 
@@ -138,7 +209,8 @@ var containerSchema = BlockSchema{
 	Attributes: []AttrSchema{
 		{Name: "image", Doc: "Container image", Required: true},
 		{Name: "image_pull_policy", Doc: "Pull policy: IfNotPresent, Always, Never"},
-		{Name: "command", Doc: "Container command (list of strings)"},
+		{Name: "command", Doc: "Container command (list of strings, overrides ENTRYPOINT)"},
+		{Name: "args", Doc: "Container args (list of strings, overrides CMD)"},
 		{Name: "working_dir", Doc: "Working directory inside the container"},
 	},
 	SubBlocks: []BlockSchema{
@@ -159,6 +231,7 @@ var initContainerSchema = BlockSchema{
 		{Name: "image", Doc: "Container image", Required: true},
 		{Name: "image_pull_policy", Doc: "Pull policy: IfNotPresent, Always, Never"},
 		{Name: "command", Doc: "Container command (list of strings)"},
+		{Name: "args", Doc: "Container args (list of strings)"},
 		{Name: "volumes", Doc: "Volume mount names to inherit from deployment"},
 	},
 	SubBlocks: []BlockSchema{
@@ -241,6 +314,7 @@ var volumeSchema = BlockSchema{
 		{Name: "empty_dir", Doc: "Use ephemeral empty directory (bool)"},
 		{Name: "pvc", Doc: "PersistentVolumeClaim name"},
 		{Name: "host_path", Doc: "Host path to mount"},
+		{Name: "host_path_type", Doc: `Host path type: "DirectoryOrCreate", "FileOrCreate", "Directory", "File", "Socket", etc.`},
 	},
 }
 
@@ -252,7 +326,8 @@ var securityContextSchema = BlockSchema{
 		{Name: "run_as_group", Doc: "GID to run as"},
 		{Name: "run_as_non_root", Doc: "Require non-root (bool)"},
 		{Name: "read_only_root", Doc: "Read-only root filesystem (bool)"},
-		{Name: "fs_group", Doc: "Filesystem group ID"},
+		{Name: "fs_group", Doc: "Filesystem group ID (pod-level)"},
+		{Name: "privileged", Doc: "Run container in privileged mode (bool, container-level)"},
 	},
 }
 
@@ -325,6 +400,8 @@ var cronjobSchema = BlockSchema{
 		{Name: "service_account", Doc: "ServiceAccount name"},
 		{Name: "container_name", Doc: "Custom container name (defaults to cronjob name)"},
 		{Name: "command", Doc: "Container command (list of strings)"},
+		{Name: "args", Doc: "Container args (list of strings)"},
+		{Name: "node_selector", Doc: "Node labels required for scheduling (map)"},
 		{Name: "concurrency", Doc: "Concurrency policy: Allow, Forbid, Replace"},
 		{Name: "deadline", Doc: "Starting deadline (e.g. \"4m\")"},
 		{Name: "restart", Doc: "Restart policy: OnFailure, Never"},
@@ -335,6 +412,7 @@ var cronjobSchema = BlockSchema{
 		resourcesSchema,
 		volumeSchema,
 		securityContextSchema,
+		tolerationSchema,
 	},
 }
 
@@ -396,6 +474,12 @@ func init() {
 	registerBlock(&daemonsetSchema)
 	registerBlock(&statefulsetSchema)
 	registerBlock(&volumeClaimSchema)
+	registerBlock(&tolerationSchema)
+	registerBlock(&clusterRoleSchema)
+	registerBlock(&clusterRoleBindingSchema)
+	registerBlock(&policyRuleSchema)
+	registerBlock(&roleRefSchema)
+	registerBlock(&subjectSchema)
 	registerBlock(&cronjobSchema)
 	registerBlock(&configmapSchema)
 	registerBlock(&secretBlockSchema)

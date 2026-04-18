@@ -73,21 +73,23 @@ type VolumeConfig struct {
 	SubPath   string // mount a specific key from configmap/secret
 	ReadOnly  bool
 	// Source — exactly one of these is set
-	Secret    string // secret name
-	ConfigMap string // configmap name
-	EmptyDir  bool
-	PVC       string // PersistentVolumeClaim name
-	HostPath  string // host path
+	Secret       string // secret name
+	ConfigMap    string // configmap name
+	EmptyDir     bool
+	PVC          string // PersistentVolumeClaim name
+	HostPath     string // host path
+	HostPathType string // optional: DirectoryOrCreate, FileOrCreate, Directory, File, Socket, etc.
 }
 
-// EnvEntry represents an environment variable — either a plain value, a secret reference, or a configmap reference.
+// EnvEntry represents an environment variable — either a plain value, a secret reference, a configmap reference, or a downward-API field reference.
 type EnvEntry struct {
 	Name          string
-	Value         string // plain value (set if SecretName and ConfigMapName are empty)
+	Value         string // plain value (set if all other sources are empty)
 	SecretName    string // K8s secret name (set for secret refs)
 	SecretKey     string // key within the secret
 	ConfigMapName string // K8s configmap name (set for configmap refs)
 	ConfigMapKey  string // key within the configmap
+	FieldPath     string // downward API field path (e.g. "spec.nodeName", "metadata.name")
 }
 
 // EnvFromEntry imports all keys from a ConfigMap or Secret as env vars.
@@ -103,6 +105,7 @@ type InitContainerConfig struct {
 	Image           string
 	ImagePullPolicy string
 	Command         []string
+	Args            []string
 	Env             []EnvEntry
 	EnvFrom         []EnvFromEntry
 	VolumeMounts    []string // volume names to mount (inherits mount paths from app volumes)
@@ -128,4 +131,14 @@ type SecurityContextConfig struct {
 	RunAsNonRoot *bool
 	ReadOnlyRoot *bool
 	FSGroup      *int64
+	Privileged   *bool // container-level only
+}
+
+// TolerationConfig matches Kubernetes Toleration semantics.
+type TolerationConfig struct {
+	Key               string
+	Operator          string // "Equal" (default) or "Exists"
+	Value             string
+	Effect            string // "NoSchedule", "PreferNoSchedule", "NoExecute"
+	TolerationSeconds *int64
 }

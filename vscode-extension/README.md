@@ -20,6 +20,10 @@ Syntax highlighting, snippets, and language support for [kdef](https://github.co
 | `deployment-worker` | Worker deployment (no service) |
 | `daemonset` | DaemonSet (one pod per node) |
 | `statefulset` | StatefulSet with per-pod storage |
+| `clusterrole` | Cluster-scoped RBAC role |
+| `clusterrolebinding` | Bind a ClusterRole to a subject |
+| `toleration` | Tolerate a node taint |
+| `field_ref` | Downward API env reference |
 | `container` | Container block |
 | `init` | Init container |
 | `cronjob` | CronJob |

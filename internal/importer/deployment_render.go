@@ -80,6 +80,9 @@ func renderDeploymentBlock(group AppGroup) string {
 		b.WriteString("  }\n")
 	}
 
+	writeNodeSelector(&b, podSpec.NodeSelector)
+	writeTolerations(&b, podSpec.Tolerations)
+
 	// Service
 	if group.Service != nil {
 		renderServiceBlock(&b, group.Service, group.Name)
@@ -103,6 +106,7 @@ func renderContainerBlock(b *strings.Builder, c corev1.Container, podVolumes []c
 	}
 
 	writeCommandMultiLine(b, c.Command, "    ")
+	writeArgsMultiLine(b, c.Args, "    ")
 
 	// Ports
 	for _, port := range c.Ports {
@@ -155,6 +159,7 @@ func renderInitContainerBlock(b *strings.Builder, ic corev1.Container) {
 		b.WriteString(fmt.Sprintf("    image_pull_policy = %q\n", string(ic.ImagePullPolicy)))
 	}
 	writeCommandMultiLine(b, ic.Command, "    ")
+	writeArgsMultiLine(b, ic.Args, "    ")
 	if len(ic.VolumeMounts) > 0 {
 		var volNames []string
 		for _, vm := range ic.VolumeMounts {

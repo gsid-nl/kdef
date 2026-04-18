@@ -60,6 +60,7 @@ type KdefReleaseReconciler struct {
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=bitnami.com,resources=sealedsecrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cert-manager.io,resources=certificates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
 
 func (r *KdefReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -381,6 +382,10 @@ func applyOrder(kind string) int {
 		return 2
 	case "ServiceAccount":
 		return 3
+	case "ClusterRole", "Role":
+		return 3
+	case "ClusterRoleBinding", "RoleBinding":
+		return 4
 	case "Service":
 		return 4
 	case "Deployment", "DaemonSet", "StatefulSet", "CronJob":

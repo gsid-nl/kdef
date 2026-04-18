@@ -34,6 +34,9 @@ func GenerateCronJob(cj types.CronJobConfig) *batchv1.CronJob {
 	if len(cj.Command) > 0 {
 		container.Command = cj.Command
 	}
+	if len(cj.Args) > 0 {
+		container.Args = cj.Args
+	}
 
 	for _, e := range cj.Env {
 		container.Env = append(container.Env, buildEnvVar(e))
@@ -78,6 +81,12 @@ func GenerateCronJob(cj types.CronJobConfig) *batchv1.CronJob {
 	}
 	if cj.ServiceAccountName != "" {
 		spec.ServiceAccountName = cj.ServiceAccountName
+	}
+	if len(cj.NodeSelector) > 0 {
+		spec.NodeSelector = cj.NodeSelector
+	}
+	if tols := buildTolerations(cj.Tolerations); len(tols) > 0 {
+		spec.Tolerations = tols
 	}
 
 	concurrencyPolicy := batchv1.AllowConcurrent

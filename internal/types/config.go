@@ -13,6 +13,8 @@ type KdefConfig struct {
 	PersistentVolumeClaims  []PersistentVolumeClaimConfig
 	Namespaces              []string
 	ServiceAccounts         []ServiceAccountConfig
+	ClusterRoles            []ClusterRoleConfig
+	ClusterRoleBindings     []ClusterRoleBindingConfig
 	IngressDefaults         *IngressDefaults
 	Warnings                []string // non-fatal validation warnings
 }

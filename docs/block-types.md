@@ -316,35 +316,53 @@ deployment "queue-consumer" {
 
 Runs one pod per node. Useful for log collectors, metrics agents, and node-level networking components.
 
-The `daemonset` block accepts the same `container`, `init`, `volume`, `security_context`, and `service` sub-blocks as `deployment`. It does **not** support `scale`, `autoscale`, or `ingress` — DaemonSets have no replicas and are typically internal to the cluster.
+The `daemonset` block accepts the same `container`, `init`, `volume`, `security_context`, `service`, and `toleration` sub-blocks as `deployment`, plus an optional top-level `node_selector`. It does **not** support `scale`, `autoscale`, or `ingress`.
 
 ```hcl
-daemonset "node-exporter" {
-  namespace       = "monitoring"
-  service_account = "node-exporter"
+daemonset "promtail" {
+  namespace       = "logs"
+  service_account = "promtail"
 
-  container "exporter" {
-    image = "quay.io/prometheus/node-exporter:v1.8.0"
+  container "promtail" {
+    image = "grafana/promtail:2.9.3"
+    args  = ["-config.file=/etc/promtail/promtail.yaml"]
 
-    port "9100" "metrics" {
-      tcp_ready = true
+    port "9080" "http-metrics" {}
+
+    env {
+      HOSTNAME = field_ref("spec.nodeName")
+    }
+
+    volume "config" {
+      mount_path = "/etc/promtail"
+      config_map = "promtail-config"
+    }
+
+    volume "run" {
+      mount_path     = "/run/promtail"
+      host_path      = "/run/promtail"
+      host_path_type = "DirectoryOrCreate"
+    }
+
+    volume "varlog" {
+      mount_path = "/var/log"
+      host_path  = "/var/log"
+      read_only  = true
+    }
+
+    security_context {
+      privileged  = true
+      run_as_user = 0
     }
 
     resources {
       cpu    = "50m..200m"
-      memory = "64Mi..128Mi"
-    }
-
-    volume "proc" {
-      mount_path = "/host/proc"
-      host_path  = "/proc"
-      read_only  = true
+      memory = "128Mi..256Mi"
     }
   }
 
-  service {
-    port "9100" "metrics" {}
-  }
+  toleration { effect = "NoSchedule" operator = "Exists" }
+  toleration { effect = "NoExecute"  operator = "Exists" }
 }
 ```
 
@@ -619,3 +637,84 @@ deployment "api" {
   }
 }
 ```
+
+## `clusterrole` — Kubernetes ClusterRole
+
+Cluster-scoped RBAC. Use `rule {}` sub-blocks to list policy rules.
+
+```hcl
+clusterrole "promtail" {
+  rule {
+    api_groups = [""]
+    resources  = ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
+    verbs      = ["get", "watch", "list"]
+  }
+
+  rule {
+    non_resource_urls = ["/metrics"]
+    verbs             = ["get"]
+  }
+}
+```
+
+If `api_groups` is omitted and `resources` is set, it defaults to `[""]` (the core API group).
+
+## `clusterrolebinding` — Kubernetes ClusterRoleBinding
+
+Binds a ClusterRole to one or more subjects (typically ServiceAccounts). Use a `role_ref {}` block and one or more `subject {}` blocks.
+
+```hcl
+clusterrolebinding "promtail" {
+  role_ref {
+    name = "promtail"  # kind defaults to "ClusterRole"
+  }
+
+  subject {
+    # kind defaults to "ServiceAccount"
+    name      = "promtail"
+    namespace = "logs"
+  }
+}
+```
+
+## Pod scheduling: `toleration` and `node_selector`
+
+All workload block types (`deployment`, `daemonset`, `statefulset`, `cronjob`) accept:
+
+- A top-level `node_selector` map — pods only schedule on nodes whose labels match.
+- Zero or more `toleration {}` sub-blocks — tolerate node taints.
+
+```hcl
+daemonset "gpu-driver" {
+  namespace     = "kube-system"
+  node_selector = { "gpu" = "nvidia" }
+
+  toleration {
+    key      = "nvidia.com/gpu"
+    operator = "Exists"
+    effect   = "NoSchedule"
+  }
+
+  container "driver" {
+    image = "nvidia/driver:550"
+    security_context {
+      privileged = true
+    }
+  }
+}
+```
+
+## Downward API: `field_ref()`
+
+Env vars can read pod/node metadata via `field_ref()`:
+
+```hcl
+env {
+  NODE_NAME = field_ref("spec.nodeName")
+  POD_NAME  = field_ref("metadata.name")
+  POD_NS    = field_ref("metadata.namespace")
+  POD_IP    = field_ref("status.podIP")
+}
+```
+
+This generates `valueFrom.fieldRef` in the rendered manifest.

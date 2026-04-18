@@ -42,7 +42,10 @@ The importer auto-detects:
 - StatefulSets (including `volumeClaimTemplates`) -> `statefulset` blocks
 - CronJobs -> `cronjob` blocks
 - ConfigMaps -> `configmap` blocks
+- ClusterRoles + ClusterRoleBindings -> `clusterrole` / `clusterrolebinding` blocks (from YAML files)
 - Secret references in env vars -> `secret()` calls
+- Downward-API env vars -> `field_ref()` calls
+- Tolerations, `node_selector`, `host_path.type`, container `args`, privileged security contexts
 - Multi-host ingresses, probe settings, init containers, sidecars, volumes
 
 ## Apply

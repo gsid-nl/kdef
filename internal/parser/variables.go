@@ -327,6 +327,7 @@ func BuildEvalContext(vars map[string]types.VariableDecl, overrides map[string]s
 		Functions: map[string]function.Function{
 			"secret":    secretFunction(),
 			"configmap": configmapFunction(),
+			"field_ref": fieldRefFunction(),
 			"file":      FileFunction(resolveBaseDir(baseDir)),
 			"image":     ImageFunction(images),
 		},
@@ -359,6 +360,25 @@ func secretFunction() function.Function {
 			return cty.ObjectVal(map[string]cty.Value{
 				"__secret_name": args[0],
 				"__secret_key":  args[1],
+			}), nil
+		},
+	})
+}
+
+// fieldRefFunction returns a cty function that creates a downward-API field reference marker.
+// Usage in kdef: field_ref("spec.nodeName")
+// Returns a cty object with __field_path that the env parser recognizes.
+func fieldRefFunction() function.Function {
+	return function.New(&function.Spec{
+		Params: []function.Parameter{
+			{Name: "field_path", Type: cty.String},
+		},
+		Type: function.StaticReturnType(cty.Object(map[string]cty.Type{
+			"__field_path": cty.String,
+		})),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			return cty.ObjectVal(map[string]cty.Value{
+				"__field_path": args[0],
 			}), nil
 		},
 	})

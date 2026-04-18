@@ -59,15 +59,17 @@ func runImport(cmd *cobra.Command, args []string) error {
 	result := importer.MapToKdef(resources)
 
 	total := len(result.Deployments) + len(result.DaemonSets) + len(result.StatefulSets) +
-		len(result.CronJobs) + len(result.ConfigMaps) + len(result.PersistentVolumeClaims)
+		len(result.CronJobs) + len(result.ConfigMaps) + len(result.PersistentVolumeClaims) +
+		len(result.ClusterRoles) + len(result.ClusterRoleBindings)
 	if total == 0 {
 		fmt.Fprintln(cmd.ErrOrStderr(), "no resources found to import")
 		return nil
 	}
 
-	fmt.Fprintf(cmd.ErrOrStderr(), "found %d deployment(s), %d daemonset(s), %d statefulset(s), %d cronjob(s), %d configmap(s), %d pvc(s)\n",
+	fmt.Fprintf(cmd.ErrOrStderr(), "found %d deployment(s), %d daemonset(s), %d statefulset(s), %d cronjob(s), %d configmap(s), %d pvc(s), %d clusterrole(s), %d clusterrolebinding(s)\n",
 		len(result.Deployments), len(result.DaemonSets), len(result.StatefulSets),
-		len(result.CronJobs), len(result.ConfigMaps), len(result.PersistentVolumeClaims))
+		len(result.CronJobs), len(result.ConfigMaps), len(result.PersistentVolumeClaims),
+		len(result.ClusterRoles), len(result.ClusterRoleBindings))
 
 	if importOutputDir != "" {
 		return importer.WriteKdefFiles(result, importOutputDir)
