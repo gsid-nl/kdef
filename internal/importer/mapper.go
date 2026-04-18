@@ -13,15 +13,19 @@ import (
 
 // AppGroup groups related K8s resources that form a single kdef app/worker.
 type AppGroup struct {
-	Name       string
-	Deployment *appsv1.Deployment
-	Service    *corev1.Service
-	Ingress    *networkingv1.Ingress
+	Name        string
+	Deployment  *appsv1.Deployment
+	DaemonSet   *appsv1.DaemonSet
+	StatefulSet *appsv1.StatefulSet
+	Service     *corev1.Service
+	Ingress     *networkingv1.Ingress
 }
 
 // ImportResult holds all generated kdef blocks.
 type ImportResult struct {
 	Deployments            []string // rendered kdef deployment blocks
+	DaemonSets             []string // rendered kdef daemonset blocks
+	StatefulSets           []string // rendered kdef statefulset blocks
 	CronJobs               []string // rendered kdef cronjob blocks
 	ConfigMaps             []string // rendered kdef configmap blocks
 	PersistentVolumeClaims []string // rendered kdef persistentvolumeclaim blocks
@@ -32,10 +36,16 @@ func MapToKdef(resources *ClusterResources) ImportResult {
 	var result ImportResult
 
 	// Group deployments with their services and ingresses
-	groups := groupResources(resources)
+	depGroups, dsGroups, stsGroups := groupWorkloads(resources)
 
-	for _, group := range groups {
+	for _, group := range depGroups {
 		result.Deployments = append(result.Deployments, renderDeploymentBlock(group))
+	}
+	for _, group := range dsGroups {
+		result.DaemonSets = append(result.DaemonSets, renderDaemonSetBlock(group))
+	}
+	for _, group := range stsGroups {
+		result.StatefulSets = append(result.StatefulSets, renderStatefulSetBlock(group))
 	}
 
 	// CronJobs are standalone
@@ -56,7 +66,7 @@ func MapToKdef(resources *ClusterResources) ImportResult {
 	return result
 }
 
-func groupResources(resources *ClusterResources) []AppGroup {
+func groupWorkloads(resources *ClusterResources) (deps, dsets, stsets []AppGroup) {
 	// Index services and ingresses by selector/name
 	serviceBySelector := make(map[string]*corev1.Service)
 	for i := range resources.Services {
@@ -65,13 +75,11 @@ func groupResources(resources *ClusterResources) []AppGroup {
 		if svc.Name == "kubernetes" {
 			continue
 		}
-		// Use the app label from selector as key
 		if appName, ok := svc.Spec.Selector["app.kubernetes.io/name"]; ok {
 			serviceBySelector[appName] = svc
 		} else if appName, ok := svc.Spec.Selector["app"]; ok {
 			serviceBySelector[appName] = svc
 		} else {
-			// Fallback: use service name
 			serviceBySelector[svc.Name] = svc
 		}
 	}
@@ -90,37 +98,56 @@ func groupResources(resources *ClusterResources) []AppGroup {
 		}
 	}
 
-	var groups []AppGroup
-	for i := range resources.Deployments {
-		dep := &resources.Deployments[i]
-		group := AppGroup{
-			Name:       dep.Name,
-			Deployment: dep,
+	findService := func(name string, labels map[string]string) *corev1.Service {
+		if svc, ok := serviceBySelector[name]; ok {
+			return svc
 		}
-
-		// Find matching service
-		if svc, ok := serviceBySelector[dep.Name]; ok {
-			group.Service = svc
-		} else {
-			// Try app label
-			if appLabel, ok := dep.Labels["app.kubernetes.io/name"]; ok {
-				if svc, ok := serviceBySelector[appLabel]; ok {
-					group.Service = svc
-				}
+		if appLabel, ok := labels["app.kubernetes.io/name"]; ok {
+			if svc, ok := serviceBySelector[appLabel]; ok {
+				return svc
 			}
 		}
+		return nil
+	}
 
-		// Find matching ingress
+	for i := range resources.Deployments {
+		dep := &resources.Deployments[i]
+		group := AppGroup{Name: dep.Name, Deployment: dep}
+		group.Service = findService(dep.Name, dep.Labels)
 		if group.Service != nil {
 			if ing, ok := ingressByService[group.Service.Name]; ok {
 				group.Ingress = ing
 			}
 		}
-
-		groups = append(groups, group)
+		deps = append(deps, group)
 	}
 
-	return groups
+	for i := range resources.DaemonSets {
+		ds := &resources.DaemonSets[i]
+		group := AppGroup{Name: ds.Name, DaemonSet: ds}
+		group.Service = findService(ds.Name, ds.Labels)
+		dsets = append(dsets, group)
+	}
+
+	for i := range resources.StatefulSets {
+		sts := &resources.StatefulSets[i]
+		group := AppGroup{Name: sts.Name, StatefulSet: sts}
+		group.Service = findService(sts.Name, sts.Labels)
+		// Also try the governing headless service by name
+		if group.Service == nil && sts.Spec.ServiceName != "" {
+			if svc, ok := serviceBySelector[sts.Spec.ServiceName]; ok {
+				group.Service = svc
+			}
+		}
+		if group.Service != nil {
+			if ing, ok := ingressByService[group.Service.Name]; ok {
+				group.Ingress = ing
+			}
+		}
+		stsets = append(stsets, group)
+	}
+
+	return deps, dsets, stsets
 }
 
 func renderCronJobBlock(cj batchv1.CronJob) string {

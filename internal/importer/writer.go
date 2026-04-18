@@ -23,6 +23,26 @@ func WriteKdefFiles(result ImportResult, outputDir string) error {
 		fmt.Printf("wrote %s\n", path)
 	}
 
+	// Write daemonsets — one file per daemonset
+	for _, ds := range result.DaemonSets {
+		name := extractBlockName(ds)
+		path := filepath.Join(outputDir, name+".kdef")
+		if err := os.WriteFile(path, []byte(ds), 0644); err != nil {
+			return fmt.Errorf("write %s: %w", path, err)
+		}
+		fmt.Printf("wrote %s\n", path)
+	}
+
+	// Write statefulsets — one file per statefulset
+	for _, sts := range result.StatefulSets {
+		name := extractBlockName(sts)
+		path := filepath.Join(outputDir, name+".kdef")
+		if err := os.WriteFile(path, []byte(sts), 0644); err != nil {
+			return fmt.Errorf("write %s: %w", path, err)
+		}
+		fmt.Printf("wrote %s\n", path)
+	}
+
 	// Write cronjobs — all in one file
 	if len(result.CronJobs) > 0 {
 		content := strings.Join(result.CronJobs, "\n")
@@ -60,6 +80,20 @@ func WriteKdefFiles(result ImportResult, outputDir string) error {
 func PrintKdef(result ImportResult) {
 	first := true
 	for _, block := range result.Deployments {
+		if !first {
+			fmt.Println()
+		}
+		first = false
+		fmt.Print(block)
+	}
+	for _, block := range result.DaemonSets {
+		if !first {
+			fmt.Println()
+		}
+		first = false
+		fmt.Print(block)
+	}
+	for _, block := range result.StatefulSets {
 		if !first {
 			fmt.Println()
 		}

@@ -38,6 +38,8 @@ kdef import --namespace my-app
 The importer auto-detects:
 - Deployments with Services/Ingresses -> `deployment` blocks
 - Deployments without Services -> worker-style `deployment` blocks (no `service {}`)
+- DaemonSets -> `daemonset` blocks
+- StatefulSets (including `volumeClaimTemplates`) -> `statefulset` blocks
 - CronJobs -> `cronjob` blocks
 - ConfigMaps -> `configmap` blocks
 - Secret references in env vars -> `secret()` calls

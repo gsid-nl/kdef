@@ -36,6 +36,8 @@ func ParseBytes(src []byte, filename string, ctx *hcl.EvalContext) (FileResult, 
 // FileResult holds all parsed blocks from a single file.
 type FileResult struct {
 	Deployments            []types.DeploymentConfig
+	DaemonSets             []types.DaemonSetConfig
+	StatefulSets           []types.StatefulSetConfig
 	CronJobs               []types.CronJobConfig
 	ConfigMaps             []types.ConfigMapConfig
 	Secrets                []types.SecretConfig
@@ -55,6 +57,8 @@ func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnos
 		result.CronJobs = append(result.CronJobs, fr.CronJobs...)
 		result.ConfigMaps = append(result.ConfigMaps, fr.ConfigMaps...)
 		result.Deployments = append(result.Deployments, fr.Deployments...)
+		result.DaemonSets = append(result.DaemonSets, fr.DaemonSets...)
+		result.StatefulSets = append(result.StatefulSets, fr.StatefulSets...)
 		result.Secrets = append(result.Secrets, fr.Secrets...)
 		result.SealedSecrets = append(result.SealedSecrets, fr.SealedSecrets...)
 		result.PersistentVolumeClaims = append(result.PersistentVolumeClaims, fr.PersistentVolumeClaims...)
@@ -81,6 +85,8 @@ func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnos
 var topLevelSchema = &hcl.BodySchema{
 	Blocks: []hcl.BlockHeaderSchema{
 		{Type: "deployment", LabelNames: []string{"name"}},
+		{Type: "daemonset", LabelNames: []string{"name"}},
+		{Type: "statefulset", LabelNames: []string{"name"}},
 		{Type: "cronjob", LabelNames: []string{"name"}},
 		{Type: "configmap", LabelNames: []string{"name"}},
 		{Type: "secret", LabelNames: []string{"name"}},
@@ -103,6 +109,18 @@ func parseBlocksFromBody(body hcl.Body, ctx *hcl.EvalContext, result *FileResult
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				result.Deployments = append(result.Deployments, dep)
+			}
+		case "daemonset":
+			ds, moreDiags := parseDaemonSetBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.DaemonSets = append(result.DaemonSets, ds)
+			}
+		case "statefulset":
+			sts, moreDiags := parseStatefulSetBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.StatefulSets = append(result.StatefulSets, sts)
 			}
 		case "cronjob":
 			cj, moreDiags := parseCronJobBlock(block, ctx)

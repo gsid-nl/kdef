@@ -47,6 +47,8 @@ func cleanMetadata(obj *metav1.ObjectMeta) {
 // ClusterResources holds all resources read from a cluster or file.
 type ClusterResources struct {
 	Deployments            []appsv1.Deployment
+	DaemonSets             []appsv1.DaemonSet
+	StatefulSets           []appsv1.StatefulSet
 	Services               []corev1.Service
 	Ingresses              []networkingv1.Ingress
 	CronJobs               []batchv1.CronJob
@@ -69,6 +71,32 @@ func ReadFromCluster(namespace string) (*ClusterResources, error) {
 			return nil, fmt.Errorf("unmarshal deployment: %w", err)
 		}
 		resources.Deployments = append(resources.Deployments, dep)
+	}
+
+	// DaemonSets
+	daemonsets, err := kubectlGet("daemonsets", namespace)
+	if err != nil {
+		return nil, fmt.Errorf("get daemonsets: %w", err)
+	}
+	for _, raw := range daemonsets {
+		var ds appsv1.DaemonSet
+		if err := json.Unmarshal(raw, &ds); err != nil {
+			return nil, fmt.Errorf("unmarshal daemonset: %w", err)
+		}
+		resources.DaemonSets = append(resources.DaemonSets, ds)
+	}
+
+	// StatefulSets
+	statefulsets, err := kubectlGet("statefulsets", namespace)
+	if err != nil {
+		return nil, fmt.Errorf("get statefulsets: %w", err)
+	}
+	for _, raw := range statefulsets {
+		var sts appsv1.StatefulSet
+		if err := json.Unmarshal(raw, &sts); err != nil {
+			return nil, fmt.Errorf("unmarshal statefulset: %w", err)
+		}
+		resources.StatefulSets = append(resources.StatefulSets, sts)
 	}
 
 	// Services
@@ -178,6 +206,16 @@ func ReadFromFile(filename string) (*ClusterResources, error) {
 			if err := json.Unmarshal(jsonData, &dep); err == nil {
 				resources.Deployments = append(resources.Deployments, dep)
 			}
+		case "DaemonSet":
+			var ds appsv1.DaemonSet
+			if err := json.Unmarshal(jsonData, &ds); err == nil {
+				resources.DaemonSets = append(resources.DaemonSets, ds)
+			}
+		case "StatefulSet":
+			var sts appsv1.StatefulSet
+			if err := json.Unmarshal(jsonData, &sts); err == nil {
+				resources.StatefulSets = append(resources.StatefulSets, sts)
+			}
 		case "Service":
 			var svc corev1.Service
 			if err := json.Unmarshal(jsonData, &svc); err == nil {
@@ -272,6 +310,14 @@ func cleanAllResources(r *ClusterResources) {
 		cleanMetadata(&r.Deployments[i].ObjectMeta)
 		// Also clean pod template annotations
 		cleanMetadata(&r.Deployments[i].Spec.Template.ObjectMeta)
+	}
+	for i := range r.DaemonSets {
+		cleanMetadata(&r.DaemonSets[i].ObjectMeta)
+		cleanMetadata(&r.DaemonSets[i].Spec.Template.ObjectMeta)
+	}
+	for i := range r.StatefulSets {
+		cleanMetadata(&r.StatefulSets[i].ObjectMeta)
+		cleanMetadata(&r.StatefulSets[i].Spec.Template.ObjectMeta)
 	}
 	for i := range r.Services {
 		cleanMetadata(&r.Services[i].ObjectMeta)

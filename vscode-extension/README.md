@@ -18,6 +18,8 @@ Syntax highlighting, snippets, and language support for [kdef](https://github.co
 | `deployment-ingress` | Deployment with service and ingress |
 | `deployment-multi` | Multi-container deployment with sidecar |
 | `deployment-worker` | Worker deployment (no service) |
+| `daemonset` | DaemonSet (one pod per node) |
+| `statefulset` | StatefulSet with per-pod storage |
 | `container` | Container block |
 | `init` | Init container |
 | `cronjob` | CronJob |
