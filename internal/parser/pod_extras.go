@@ -78,3 +78,49 @@ func parseNodeSelectorAttr(attr *hcl.Attribute, ctx *hcl.EvalContext) (map[strin
 	}
 	return result, diags
 }
+
+// hostPodAttrs returns the attribute schemas for host namespace / DNS flags
+// shared by every workload block that owns a pod spec.
+func hostPodAttrs() []hcl.AttributeSchema {
+	return []hcl.AttributeSchema{
+		{Name: "host_network"},
+		{Name: "host_pid"},
+		{Name: "host_ipc"},
+		{Name: "dns_policy"},
+	}
+}
+
+// parseHostPodAttrs reads the four host-namespace / DNS flags off a block's
+// already-parsed content and writes them to the provided destinations.
+func parseHostPodAttrs(
+	content *hcl.BodyContent,
+	ctx *hcl.EvalContext,
+	hostNetwork, hostPID, hostIPC *bool,
+	dnsPolicy *string,
+) hcl.Diagnostics {
+	var diags hcl.Diagnostics
+
+	boolField := func(name string, dest *bool) {
+		attr, ok := content.Attributes[name]
+		if !ok {
+			return
+		}
+		val, d := attr.Expr.Value(ctx)
+		diags = append(diags, d...)
+		if !d.HasErrors() {
+			*dest = val.True()
+		}
+	}
+	boolField("host_network", hostNetwork)
+	boolField("host_pid", hostPID)
+	boolField("host_ipc", hostIPC)
+
+	if attr, ok := content.Attributes["dns_policy"]; ok {
+		val, d := attr.Expr.Value(ctx)
+		diags = append(diags, d...)
+		if !d.HasErrors() {
+			*dnsPolicy = val.AsString()
+		}
+	}
+	return diags
+}

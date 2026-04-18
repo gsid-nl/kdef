@@ -81,6 +81,7 @@ func renderDeploymentBlock(group AppGroup) string {
 	}
 
 	writeNodeSelector(&b, podSpec.NodeSelector)
+	writeHostPodFlags(&b, podSpec)
 	writeTolerations(&b, podSpec.Tolerations)
 
 	// Service

@@ -17,6 +17,10 @@ type PodTemplateInput struct {
 	SecurityContext    *types.SecurityContextConfig
 	NodeSelector       map[string]string
 	Tolerations        []types.TolerationConfig
+	HostNetwork        bool
+	HostPID            bool
+	HostIPC            bool
+	DNSPolicy          string
 }
 
 // buildPodSpec assembles a PodSpec shared across workload kinds.
@@ -103,6 +107,18 @@ func buildPodSpec(in PodTemplateInput, extraClaimNames map[string]bool) corev1.P
 	}
 	if tols := buildTolerations(in.Tolerations); len(tols) > 0 {
 		spec.Tolerations = tols
+	}
+	if in.HostNetwork {
+		spec.HostNetwork = true
+	}
+	if in.HostPID {
+		spec.HostPID = true
+	}
+	if in.HostIPC {
+		spec.HostIPC = true
+	}
+	if in.DNSPolicy != "" {
+		spec.DNSPolicy = corev1.DNSPolicy(in.DNSPolicy)
 	}
 	return spec
 }

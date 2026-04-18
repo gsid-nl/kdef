@@ -15,17 +15,19 @@ func parseDeploymentBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Deploym
 		Replicas: 1,
 	}
 
+	attrs := []hcl.AttributeSchema{
+		{Name: "name"},
+		{Name: "namespace"},
+		{Name: "labels"},
+		{Name: "selector"},
+		{Name: "image_pull_secrets"},
+		{Name: "service_account"},
+		{Name: "node_selector"},
+		{Name: "raw"},
+	}
+	attrs = append(attrs, hostPodAttrs()...)
 	schema := &hcl.BodySchema{
-		Attributes: []hcl.AttributeSchema{
-			{Name: "name"},
-			{Name: "namespace"},
-			{Name: "labels"},
-			{Name: "selector"},
-			{Name: "image_pull_secrets"},
-			{Name: "service_account"},
-			{Name: "node_selector"},
-			{Name: "raw"},
-		},
+		Attributes: attrs,
 		Blocks: []hcl.BlockHeaderSchema{
 			{Type: "container", LabelNames: []string{"name"}},
 			{Type: "init", LabelNames: []string{"name"}},
@@ -126,6 +128,8 @@ func parseDeploymentBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Deploym
 			dep.NodeSelector = ns
 		}
 	}
+
+	diags = append(diags, parseHostPodAttrs(content, ctx, &dep.HostNetwork, &dep.HostPID, &dep.HostIPC, &dep.DNSPolicy)...)
 
 	// Process blocks
 	for _, b := range content.Blocks {

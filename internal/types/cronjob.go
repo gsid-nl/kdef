@@ -19,6 +19,10 @@ type CronJobConfig struct {
 	SecurityContext    *SecurityContextConfig
 	NodeSelector       map[string]string
 	Tolerations        []TolerationConfig
+	HostNetwork        bool
+	HostPID            bool
+	HostIPC            bool
+	DNSPolicy          string
 	Concurrency        string // "Allow", "Forbid", "Replace"
 	Deadline           string // e.g. "4m"
 	Restart            string // "OnFailure", "Never" (default: "OnFailure")

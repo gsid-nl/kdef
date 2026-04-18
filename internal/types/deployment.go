@@ -16,6 +16,10 @@ type DeploymentConfig struct {
 	SecurityContext    *SecurityContextConfig // pod-level
 	NodeSelector       map[string]string
 	Tolerations        []TolerationConfig
+	HostNetwork        bool
+	HostPID            bool
+	HostIPC            bool
+	DNSPolicy          string // default "ClusterFirst"; typically "ClusterFirstWithHostNet" when HostNetwork is true
 	Service            *ServiceConfig
 	Ingress            *IngressConfig
 	Autoscale          *AutoscaleConfig

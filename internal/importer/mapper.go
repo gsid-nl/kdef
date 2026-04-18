@@ -225,6 +225,9 @@ func renderCronJobBlock(cj batchv1.CronJob) string {
 	// SecurityContext
 	writeSecurityContext(&b, container.SecurityContext, podSpec.SecurityContext)
 
+	writeHostPodFlags(&b, podSpec)
+	writeTolerations(&b, podSpec.Tolerations)
+
 	b.WriteString("}\n")
 	return b.String()
 }
@@ -282,6 +285,23 @@ func writeTolerations(b *strings.Builder, tols []corev1.Toleration) {
 			b.WriteString(fmt.Sprintf("    toleration_seconds = %d\n", *t.TolerationSeconds))
 		}
 		b.WriteString("  }\n")
+	}
+}
+
+// writeHostPodFlags emits host_network / host_pid / host_ipc / dns_policy
+// at workload-block indent. Only writes non-default values.
+func writeHostPodFlags(b *strings.Builder, spec corev1.PodSpec) {
+	if spec.HostNetwork {
+		b.WriteString("  host_network = true\n")
+	}
+	if spec.HostPID {
+		b.WriteString("  host_pid = true\n")
+	}
+	if spec.HostIPC {
+		b.WriteString("  host_ipc = true\n")
+	}
+	if spec.DNSPolicy != "" && spec.DNSPolicy != corev1.DNSClusterFirst {
+		b.WriteString(fmt.Sprintf("  dns_policy = %q\n", string(spec.DNSPolicy)))
 	}
 }
 

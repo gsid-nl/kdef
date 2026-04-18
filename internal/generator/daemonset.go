@@ -39,6 +39,10 @@ func GenerateDaemonSet(ds types.DaemonSetConfig) []Manifest {
 		SecurityContext:    ds.SecurityContext,
 		NodeSelector:       ds.NodeSelector,
 		Tolerations:        ds.Tolerations,
+		HostNetwork:        ds.HostNetwork,
+		HostPID:            ds.HostPID,
+		HostIPC:            ds.HostIPC,
+		DNSPolicy:          ds.DNSPolicy,
 	}, nil)
 
 	k8sDS := &appsv1.DaemonSet{

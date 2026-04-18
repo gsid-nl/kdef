@@ -12,22 +12,24 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 		Concurrency: "Allow",
 	}
 
+	attrs := []hcl.AttributeSchema{
+		{Name: "image", Required: true},
+		{Name: "schedule", Required: true},
+		{Name: "container_name"},
+		{Name: "namespace"},
+		{Name: "image_pull_policy"},
+		{Name: "image_pull_secrets"},
+		{Name: "service_account"},
+		{Name: "command"},
+		{Name: "args"},
+		{Name: "node_selector"},
+		{Name: "concurrency"},
+		{Name: "deadline"},
+		{Name: "restart"},
+	}
+	attrs = append(attrs, hostPodAttrs()...)
 	schema := &hcl.BodySchema{
-		Attributes: []hcl.AttributeSchema{
-			{Name: "image", Required: true},
-			{Name: "schedule", Required: true},
-			{Name: "container_name"},
-			{Name: "namespace"},
-			{Name: "image_pull_policy"},
-			{Name: "image_pull_secrets"},
-			{Name: "service_account"},
-			{Name: "command"},
-			{Name: "args"},
-			{Name: "node_selector"},
-			{Name: "concurrency"},
-			{Name: "deadline"},
-			{Name: "restart"},
-		},
+		Attributes: attrs,
 		Blocks: []hcl.BlockHeaderSchema{
 			{Type: "env"},
 			{Type: "env_from"},
@@ -117,6 +119,8 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 			cj.NodeSelector = ns
 		}
 	}
+
+	diags = append(diags, parseHostPodAttrs(content, ctx, &cj.HostNetwork, &cj.HostPID, &cj.HostIPC, &cj.DNSPolicy)...)
 
 	// ImagePullSecrets (list of strings)
 	if attr, ok := content.Attributes["image_pull_secrets"]; ok {

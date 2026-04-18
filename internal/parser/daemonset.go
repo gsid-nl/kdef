@@ -11,17 +11,19 @@ func parseDaemonSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.DaemonSe
 		Name: block.Labels[0],
 	}
 
+	attrs := []hcl.AttributeSchema{
+		{Name: "name"},
+		{Name: "namespace"},
+		{Name: "labels"},
+		{Name: "selector"},
+		{Name: "image_pull_secrets"},
+		{Name: "service_account"},
+		{Name: "node_selector"},
+		{Name: "raw"},
+	}
+	attrs = append(attrs, hostPodAttrs()...)
 	schema := &hcl.BodySchema{
-		Attributes: []hcl.AttributeSchema{
-			{Name: "name"},
-			{Name: "namespace"},
-			{Name: "labels"},
-			{Name: "selector"},
-			{Name: "image_pull_secrets"},
-			{Name: "service_account"},
-			{Name: "node_selector"},
-			{Name: "raw"},
-		},
+		Attributes: attrs,
 		Blocks: []hcl.BlockHeaderSchema{
 			{Type: "container", LabelNames: []string{"name"}},
 			{Type: "init", LabelNames: []string{"name"}},
@@ -111,6 +113,8 @@ func parseDaemonSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.DaemonSe
 			ds.NodeSelector = ns
 		}
 	}
+
+	diags = append(diags, parseHostPodAttrs(content, ctx, &ds.HostNetwork, &ds.HostPID, &ds.HostIPC, &ds.DNSPolicy)...)
 
 	for _, b := range content.Blocks {
 		switch b.Type {
