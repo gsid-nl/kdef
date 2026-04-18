@@ -10,14 +10,31 @@ import (
 	"github.com/gsid-nl/kdef/internal/version"
 )
 
-// cleanYAML removes empty zero-value fields that K8s types serialize (status: {}, strategy: {}, etc.)
+// cleanYAML removes empty zero-value fields and strips the top-level `status`
+// block entirely. K8s types marshal status with zero-valued struct fields
+// (e.g. DaemonSetStatus.NumberMisscheduled = 0), which server-side apply
+// rejects because status is a subresource. Stripping status makes the rendered
+// YAML safe for `kubectl apply` / `kdef apply`.
 var emptyFieldPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?m)^[ ]*\w+: \{\}\n`),  // field: {}
-	regexp.MustCompile(`(?m)^[ ]*\w+:\s*\n\z`),   // trailing "field:" at end of doc
-	regexp.MustCompile(`(?m)^status:\s*\n`),       // bare status: line
+	regexp.MustCompile(`(?m)^[ ]*\w+: \{\}\n`), // field: {}
+	regexp.MustCompile(`(?m)^[ ]*\w+:\s*\n\z`), // trailing "field:" at end of doc
 }
 
 func cleanYAML(data []byte) []byte {
+	// First pass: unmarshal → drop status → re-marshal. This handles both the
+	// bare "status:" case and any populated status block with zero-value
+	// numeric fields that would otherwise leak into an apply call.
+	var obj map[string]interface{}
+	if err := yaml.Unmarshal(data, &obj); err == nil && obj != nil {
+		if _, ok := obj["status"]; ok {
+			delete(obj, "status")
+			if cleaned, err := yaml.Marshal(obj); err == nil {
+				data = cleaned
+			}
+		}
+	}
+
+	// Second pass: regex cleanup for remaining empty-value fields.
 	for _, p := range emptyFieldPatterns {
 		data = p.ReplaceAll(data, nil)
 	}
