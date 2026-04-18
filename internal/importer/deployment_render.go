@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -63,29 +62,12 @@ func renderDeploymentBlock(group AppGroup) string {
 
 	// Containers
 	for _, c := range podSpec.Containers {
-		renderContainerBlock(&b, c, dep)
+		renderContainerBlock(&b, c, podSpec.Volumes)
 	}
 
 	// Init containers
 	for _, ic := range podSpec.InitContainers {
-		b.WriteString(fmt.Sprintf("\n  init %q {\n", ic.Name))
-		b.WriteString(fmt.Sprintf("    image = %q\n", ic.Image))
-		if ic.ImagePullPolicy != "" && ic.ImagePullPolicy != "IfNotPresent" {
-			b.WriteString(fmt.Sprintf("    image_pull_policy = %q\n", string(ic.ImagePullPolicy)))
-		}
-		writeCommandMultiLine(&b, ic.Command, "    ")
-		if len(ic.VolumeMounts) > 0 {
-			var volNames []string
-			for _, vm := range ic.VolumeMounts {
-				volNames = append(volNames, fmt.Sprintf("%q", vm.Name))
-			}
-			b.WriteString(fmt.Sprintf("    volumes = [%s]\n", strings.Join(volNames, ", ")))
-		}
-		writeEnvFrom(&b, ic, "    ")
-		if ic.SecurityContext != nil {
-			writeSecurityContext(&b, ic.SecurityContext, nil, "    ")
-		}
-		b.WriteString("  }\n")
+		renderInitContainerBlock(&b, ic)
 	}
 
 	// Pod-level volumes are derived from container volume blocks automatically
@@ -100,24 +82,7 @@ func renderDeploymentBlock(group AppGroup) string {
 
 	// Service
 	if group.Service != nil {
-		svc := group.Service
-		b.WriteString("\n  service {\n")
-		if svc.Name != group.Name {
-			b.WriteString(fmt.Sprintf("    name = %q\n", svc.Name))
-		}
-		for _, port := range svc.Spec.Ports {
-			portName := port.Name
-			if portName == "" {
-				portName = fmt.Sprintf("port-%d", port.Port)
-			}
-			if port.TargetPort.IntValue() != 0 && port.TargetPort.IntValue() != int(port.Port) {
-				b.WriteString(fmt.Sprintf("    port %q %q {\n      target = %d\n    }\n",
-					fmt.Sprintf("%d", port.Port), portName, port.TargetPort.IntValue()))
-			} else {
-				b.WriteString(fmt.Sprintf("    port %q %q {}\n", fmt.Sprintf("%d", port.Port), portName))
-			}
-		}
-		b.WriteString("  }\n")
+		renderServiceBlock(&b, group.Service, group.Name)
 	}
 
 	// Ingress
@@ -129,7 +94,7 @@ func renderDeploymentBlock(group AppGroup) string {
 	return b.String()
 }
 
-func renderContainerBlock(b *strings.Builder, c corev1.Container, dep *appsv1.Deployment) {
+func renderContainerBlock(b *strings.Builder, c corev1.Container, podVolumes []corev1.Volume) {
 	b.WriteString(fmt.Sprintf("\n  container %q {\n", c.Name))
 	b.WriteString(fmt.Sprintf("    image = %q\n", c.Image))
 
@@ -174,11 +139,55 @@ func renderContainerBlock(b *strings.Builder, c corev1.Container, dep *appsv1.De
 	writeResources(b, c, "    ")
 
 	// Volume mounts (container-specific)
-	writeVolumes(b, dep.Spec.Template.Spec.Volumes, c.VolumeMounts, "    ")
+	writeVolumes(b, podVolumes, c.VolumeMounts, "    ")
 
 	// Security context
 	writeSecurityContext(b, c.SecurityContext, nil, "    ")
 
+	b.WriteString("  }\n")
+}
+
+// renderInitContainerBlock renders an init container shared across workload kinds.
+func renderInitContainerBlock(b *strings.Builder, ic corev1.Container) {
+	b.WriteString(fmt.Sprintf("\n  init %q {\n", ic.Name))
+	b.WriteString(fmt.Sprintf("    image = %q\n", ic.Image))
+	if ic.ImagePullPolicy != "" && ic.ImagePullPolicy != "IfNotPresent" {
+		b.WriteString(fmt.Sprintf("    image_pull_policy = %q\n", string(ic.ImagePullPolicy)))
+	}
+	writeCommandMultiLine(b, ic.Command, "    ")
+	if len(ic.VolumeMounts) > 0 {
+		var volNames []string
+		for _, vm := range ic.VolumeMounts {
+			volNames = append(volNames, fmt.Sprintf("%q", vm.Name))
+		}
+		b.WriteString(fmt.Sprintf("    volumes = [%s]\n", strings.Join(volNames, ", ")))
+	}
+	writeEnvFrom(b, ic, "    ")
+	if ic.SecurityContext != nil {
+		writeSecurityContext(b, ic.SecurityContext, nil, "    ")
+	}
+	b.WriteString("  }\n")
+}
+
+// renderServiceBlock renders a Service block shared across workload kinds.
+// The workloadName is used to suppress the service name when it's implicit.
+func renderServiceBlock(b *strings.Builder, svc *corev1.Service, workloadName string) {
+	b.WriteString("\n  service {\n")
+	if svc.Name != workloadName {
+		b.WriteString(fmt.Sprintf("    name = %q\n", svc.Name))
+	}
+	for _, port := range svc.Spec.Ports {
+		portName := port.Name
+		if portName == "" {
+			portName = fmt.Sprintf("port-%d", port.Port)
+		}
+		if port.TargetPort.IntValue() != 0 && port.TargetPort.IntValue() != int(port.Port) {
+			b.WriteString(fmt.Sprintf("    port %q %q {\n      target = %d\n    }\n",
+				fmt.Sprintf("%d", port.Port), portName, port.TargetPort.IntValue()))
+		} else {
+			b.WriteString(fmt.Sprintf("    port %q %q {}\n", fmt.Sprintf("%d", port.Port), portName))
+		}
+	}
 	b.WriteString("  }\n")
 }
 

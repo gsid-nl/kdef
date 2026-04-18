@@ -173,6 +173,8 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		config.CronJobs = append(config.CronJobs, result.CronJobs...)
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
 		config.Deployments = append(config.Deployments, result.Deployments...)
+		config.DaemonSets = append(config.DaemonSets, result.DaemonSets...)
+		config.StatefulSets = append(config.StatefulSets, result.StatefulSets...)
 		config.Secrets = append(config.Secrets, result.Secrets...)
 		config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
 		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
@@ -244,6 +246,8 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	merged.CronJobs = append(merged.CronJobs, rootDefs.CronJobs...)
 	merged.ConfigMaps = append(merged.ConfigMaps, rootDefs.ConfigMaps...)
 	merged.Deployments = append(merged.Deployments, rootDefs.Deployments...)
+	merged.DaemonSets = append(merged.DaemonSets, rootDefs.DaemonSets...)
+	merged.StatefulSets = append(merged.StatefulSets, rootDefs.StatefulSets...)
 	merged.Secrets = append(merged.Secrets, rootDefs.Secrets...)
 	merged.SealedSecrets = append(merged.SealedSecrets, rootDefs.SealedSecrets...)
 	merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, rootDefs.PersistentVolumeClaims...)
@@ -300,6 +304,8 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 		}
 
 		merged.Deployments = append(merged.Deployments, config.Deployments...)
+		merged.DaemonSets = append(merged.DaemonSets, config.DaemonSets...)
+		merged.StatefulSets = append(merged.StatefulSets, config.StatefulSets...)
 		merged.CronJobs = append(merged.CronJobs, config.CronJobs...)
 		merged.ConfigMaps = append(merged.ConfigMaps, config.ConfigMaps...)
 		merged.Secrets = append(merged.Secrets, config.Secrets...)
@@ -328,6 +334,16 @@ func injectNamespace(config *types.KdefConfig, namespace string) {
 	for i := range config.Deployments {
 		if config.Deployments[i].Namespace == "" {
 			config.Deployments[i].Namespace = namespace
+		}
+	}
+	for i := range config.DaemonSets {
+		if config.DaemonSets[i].Namespace == "" {
+			config.DaemonSets[i].Namespace = namespace
+		}
+	}
+	for i := range config.StatefulSets {
+		if config.StatefulSets[i].Namespace == "" {
+			config.StatefulSets[i].Namespace = namespace
 		}
 	}
 	for i := range config.CronJobs {
@@ -362,6 +378,16 @@ func injectServiceAccount(config *types.KdefConfig, serviceAccount string) {
 	for i := range config.Deployments {
 		if config.Deployments[i].ServiceAccountName == "" {
 			config.Deployments[i].ServiceAccountName = serviceAccount
+		}
+	}
+	for i := range config.DaemonSets {
+		if config.DaemonSets[i].ServiceAccountName == "" {
+			config.DaemonSets[i].ServiceAccountName = serviceAccount
+		}
+	}
+	for i := range config.StatefulSets {
+		if config.StatefulSets[i].ServiceAccountName == "" {
+			config.StatefulSets[i].ServiceAccountName = serviceAccount
 		}
 	}
 	for i := range config.CronJobs {
@@ -402,6 +428,22 @@ func validateNamespaces(config *types.KdefConfig, root *types.RootConfig) error 
 		}
 		if dep.ServiceAccountName != "" && len(definedSAs) > 0 && !definedSAs[dep.ServiceAccountName] {
 			return fmt.Errorf("deployment %q uses service_account %q which is not defined in root.kdef", dep.Name, dep.ServiceAccountName)
+		}
+	}
+	for _, ds := range config.DaemonSets {
+		if err := check("daemonset", ds.Name, ds.Namespace); err != nil {
+			return err
+		}
+		if ds.ServiceAccountName != "" && len(definedSAs) > 0 && !definedSAs[ds.ServiceAccountName] {
+			return fmt.Errorf("daemonset %q uses service_account %q which is not defined in root.kdef", ds.Name, ds.ServiceAccountName)
+		}
+	}
+	for _, sts := range config.StatefulSets {
+		if err := check("statefulset", sts.Name, sts.Namespace); err != nil {
+			return err
+		}
+		if sts.ServiceAccountName != "" && len(definedSAs) > 0 && !definedSAs[sts.ServiceAccountName] {
+			return fmt.Errorf("statefulset %q uses service_account %q which is not defined in root.kdef", sts.Name, sts.ServiceAccountName)
 		}
 	}
 	for _, cj := range config.CronJobs {
@@ -508,6 +550,28 @@ func validateReferences(config *types.KdefConfig) {
 		}
 		for _, ic := range dep.InitContainers {
 			checkEnv("deployment", dep.Name, ic.Env, ic.EnvFrom)
+		}
+	}
+
+	for _, ds := range config.DaemonSets {
+		checkVolumes("daemonset", ds.Name, ds.Volumes)
+		for _, c := range ds.Containers {
+			checkEnv("daemonset", ds.Name, c.Env, c.EnvFrom)
+			checkVolumes("daemonset", ds.Name, c.Volumes)
+		}
+		for _, ic := range ds.InitContainers {
+			checkEnv("daemonset", ds.Name, ic.Env, ic.EnvFrom)
+		}
+	}
+
+	for _, sts := range config.StatefulSets {
+		checkVolumes("statefulset", sts.Name, sts.Volumes)
+		for _, c := range sts.Containers {
+			checkEnv("statefulset", sts.Name, c.Env, c.EnvFrom)
+			checkVolumes("statefulset", sts.Name, c.Volumes)
+		}
+		for _, ic := range sts.InitContainers {
+			checkEnv("statefulset", sts.Name, ic.Env, ic.EnvFrom)
 		}
 	}
 
@@ -815,6 +879,8 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 		config.CronJobs = append(config.CronJobs, result.CronJobs...)
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
 		config.Deployments = append(config.Deployments, result.Deployments...)
+		config.DaemonSets = append(config.DaemonSets, result.DaemonSets...)
+		config.StatefulSets = append(config.StatefulSets, result.StatefulSets...)
 		config.Secrets = append(config.Secrets, result.Secrets...)
 		config.SealedSecrets = append(config.SealedSecrets, result.SealedSecrets...)
 		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
@@ -823,34 +889,39 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 	return config, nil
 }
 
-// applyIngressDefaults merges ingress defaults into all deployments that have an ingress block.
+// applyIngressDefaults merges ingress defaults into all workloads that have an ingress block.
 func applyIngressDefaults(config *types.KdefConfig) {
 	defaults := config.IngressDefaults
 
-	for i := range config.Deployments {
-		dep := &config.Deployments[i]
-		if dep.Ingress == nil {
-			continue
+	apply := func(ing *types.IngressConfig) {
+		if ing == nil {
+			return
 		}
-
-		if defaults.TLS != nil && !dep.Ingress.TLS {
-			dep.Ingress.TLS = *defaults.TLS
+		if defaults.TLS != nil && !ing.TLS {
+			ing.TLS = *defaults.TLS
 		}
-		if defaults.TLSSecret != "" && dep.Ingress.TLSSecret == "" {
-			dep.Ingress.TLSSecret = defaults.TLSSecret
+		if defaults.TLSSecret != "" && ing.TLSSecret == "" {
+			ing.TLSSecret = defaults.TLSSecret
 		}
-		if defaults.Issuer != "" && dep.Ingress.Issuer == "" {
-			dep.Ingress.Issuer = defaults.Issuer
+		if defaults.Issuer != "" && ing.Issuer == "" {
+			ing.Issuer = defaults.Issuer
 		}
 		if len(defaults.Annotations) > 0 {
 			merged := make(map[string]string)
 			for k, v := range defaults.Annotations {
 				merged[k] = v
 			}
-			for k, v := range dep.Ingress.Annotations {
+			for k, v := range ing.Annotations {
 				merged[k] = v
 			}
-			dep.Ingress.Annotations = merged
+			ing.Annotations = merged
 		}
+	}
+
+	for i := range config.Deployments {
+		apply(config.Deployments[i].Ingress)
+	}
+	for i := range config.StatefulSets {
+		apply(config.StatefulSets[i].Ingress)
 	}
 }

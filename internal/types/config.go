@@ -4,6 +4,8 @@ package types
 type KdefConfig struct {
 	Variables       map[string]VariableDecl
 	Deployments     []DeploymentConfig
+	DaemonSets      []DaemonSetConfig
+	StatefulSets    []StatefulSetConfig
 	CronJobs        []CronJobConfig
 	ConfigMaps              []ConfigMapConfig
 	Secrets                 []SecretConfig

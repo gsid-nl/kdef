@@ -35,6 +35,8 @@ var builtinFunctions = []FuncSchema{
 
 var topLevelBlocks = []BlockSchema{
 	deploymentSchema,
+	daemonsetSchema,
+	statefulsetSchema,
 	cronjobSchema,
 	configmapSchema,
 	secretBlockSchema,
@@ -65,6 +67,67 @@ var deploymentSchema = BlockSchema{
 		serviceSchema,
 		ingressSchema,
 		autoscaleSchema,
+	},
+}
+
+var daemonsetSchema = BlockSchema{
+	Type:   "daemonset",
+	Labels: 1,
+	Doc:    "Kubernetes DaemonSet (one pod per node)",
+	Attributes: []AttrSchema{
+		{Name: "namespace", Doc: "Kubernetes namespace"},
+		{Name: "labels", Doc: "Custom pod labels (map)"},
+		{Name: "selector", Doc: "Custom label selector (map)"},
+		{Name: "image_pull_secrets", Doc: "List of image pull secret names"},
+		{Name: "service_account", Doc: "ServiceAccount name"},
+		{Name: "raw", Doc: "Raw YAML to deep-merge into the manifest"},
+	},
+	SubBlocks: []BlockSchema{
+		containerSchema,
+		initContainerSchema,
+		volumeSchema,
+		securityContextSchema,
+		serviceSchema,
+	},
+}
+
+var statefulsetSchema = BlockSchema{
+	Type:   "statefulset",
+	Labels: 1,
+	Doc:    "Kubernetes StatefulSet (stable pod identity and per-pod storage)",
+	Attributes: []AttrSchema{
+		{Name: "namespace", Doc: "Kubernetes namespace"},
+		{Name: "labels", Doc: "Custom pod labels (map)"},
+		{Name: "selector", Doc: "Custom label selector (map)"},
+		{Name: "image_pull_secrets", Doc: "List of image pull secret names"},
+		{Name: "service_account", Doc: "ServiceAccount name"},
+		{Name: "service_name", Doc: "Governing headless Service name (required by K8s)"},
+		{Name: "pod_management_policy", Doc: "Pod management policy: OrderedReady (default), Parallel"},
+		{Name: "raw", Doc: "Raw YAML to deep-merge into the manifest"},
+	},
+	SubBlocks: []BlockSchema{
+		containerSchema,
+		initContainerSchema,
+		scaleSchema,
+		volumeSchema,
+		volumeClaimSchema,
+		securityContextSchema,
+		serviceSchema,
+		ingressSchema,
+	},
+}
+
+var volumeClaimSchema = BlockSchema{
+	Type:   "volume_claim",
+	Labels: 1,
+	Doc:    "StatefulSet volumeClaimTemplate (per-pod PVC)",
+	Attributes: []AttrSchema{
+		{Name: "mount_path", Doc: "Mount path inside the container", Required: true},
+		{Name: "sub_path", Doc: "Subpath within the volume"},
+		{Name: "read_only", Doc: "Mount as read-only (bool)"},
+		{Name: "storage_class", Doc: "StorageClass name"},
+		{Name: "access_modes", Doc: "Access modes (default [\"ReadWriteOnce\"])"},
+		{Name: "storage", Doc: "Storage size (e.g. \"10Gi\")", Required: true},
 	},
 }
 
@@ -330,6 +393,9 @@ var blockSchemaMap map[string]*BlockSchema
 func init() {
 	blockSchemaMap = make(map[string]*BlockSchema)
 	registerBlock(&deploymentSchema)
+	registerBlock(&daemonsetSchema)
+	registerBlock(&statefulsetSchema)
+	registerBlock(&volumeClaimSchema)
 	registerBlock(&cronjobSchema)
 	registerBlock(&configmapSchema)
 	registerBlock(&secretBlockSchema)

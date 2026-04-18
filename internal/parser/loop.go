@@ -60,6 +60,8 @@ func expandForBlocks(body hcl.Body, ctx *hcl.EvalContext) (hcl.Body, []FileResul
 		innerSchema := &hcl.BodySchema{
 			Blocks: []hcl.BlockHeaderSchema{
 				{Type: "deployment", LabelNames: []string{"name"}},
+				{Type: "daemonset", LabelNames: []string{"name"}},
+				{Type: "statefulset", LabelNames: []string{"name"}},
 				{Type: "cronjob", LabelNames: []string{"name"}},
 				{Type: "configmap", LabelNames: []string{"name"}},
 			},

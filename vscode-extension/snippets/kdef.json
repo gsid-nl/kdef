@@ -119,6 +119,59 @@
       "}"
     ]
   },
+  "DaemonSet": {
+    "prefix": "daemonset",
+    "description": "Create a new daemonset block (one pod per node)",
+    "body": [
+      "daemonset \"${1:name}\" {",
+      "  namespace = \"${2:default}\"",
+      "",
+      "  container \"${1:name}\" {",
+      "    image = \"${3:image:tag}\"",
+      "",
+      "    resources {",
+      "      cpu    = \"${4:50m..200m}\"",
+      "      memory = \"${5:64Mi..128Mi}\"",
+      "    }",
+      "  }",
+      "}"
+    ]
+  },
+  "StatefulSet": {
+    "prefix": "statefulset",
+    "description": "Create a new statefulset block with per-pod storage",
+    "body": [
+      "statefulset \"${1:name}\" {",
+      "  namespace    = \"${2:default}\"",
+      "  service_name = \"${1:name}\"",
+      "",
+      "  scale {",
+      "    replicas = ${3:3}",
+      "  }",
+      "",
+      "  container \"${1:name}\" {",
+      "    image = \"${4:image:tag}\"",
+      "",
+      "    port \"${5:5432}\" \"${6:svc}\" {",
+      "      tcp_ready = true",
+      "    }",
+      "",
+      "    volume \"data\" {",
+      "      mount_path = \"${7:/data}\"",
+      "    }",
+      "  }",
+      "",
+      "  volume_claim \"data\" {",
+      "    mount_path = \"${7:/data}\"",
+      "    storage    = \"${8:10Gi}\"",
+      "  }",
+      "",
+      "  service {",
+      "    port \"${5:5432}\" \"${6:svc}\" {}",
+      "  }",
+      "}"
+    ]
+  },
   "Container": {
     "prefix": "container",
     "description": "Add a container block",

@@ -54,7 +54,7 @@ type KdefReleaseReconciler struct {
 // +kubebuilder:rbac:groups=kdef.gsid.nl,resources=kdefreleases/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=source.toolkit.fluxcd.io,resources=gitrepositories;ocirepositories;buckets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=configmaps;secrets;services;serviceaccounts;namespaces;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
@@ -383,7 +383,7 @@ func applyOrder(kind string) int {
 		return 3
 	case "Service":
 		return 4
-	case "Deployment", "CronJob":
+	case "Deployment", "DaemonSet", "StatefulSet", "CronJob":
 		return 5
 	case "Ingress", "Certificate":
 		return 6

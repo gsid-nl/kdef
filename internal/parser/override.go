@@ -162,4 +162,11 @@ func ApplyOverrides(config *types.KdefConfig, overrides OverrideResult) {
 			// For now, skip resource overrides on deployments
 		}
 	}
+	for i, sts := range config.StatefulSets {
+		if o, ok := overrides.AppOverrides[sts.Name]; ok {
+			if o.Replicas != nil {
+				config.StatefulSets[i].Replicas = *o.Replicas
+			}
+		}
+	}
 }

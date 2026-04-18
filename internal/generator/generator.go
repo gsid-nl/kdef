@@ -36,6 +36,12 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 	for _, dep := range config.Deployments {
 		result[dep.Name] = GenerateDeploymentV2(dep)
 	}
+	for _, ds := range config.DaemonSets {
+		result[ds.Name] = GenerateDaemonSet(ds)
+	}
+	for _, sts := range config.StatefulSets {
+		result[sts.Name] = GenerateStatefulSet(sts)
+	}
 	for _, cj := range config.CronJobs {
 		result[cj.Name] = GenerateCronJobManifest(cj)
 	}
@@ -63,6 +69,22 @@ func collectServiceAccountNamespaces(config *types.KdefConfig) map[string][]stri
 				seen[dep.ServiceAccountName] = make(map[string]bool)
 			}
 			seen[dep.ServiceAccountName][dep.Namespace] = true
+		}
+	}
+	for _, ds := range config.DaemonSets {
+		if ds.ServiceAccountName != "" {
+			if seen[ds.ServiceAccountName] == nil {
+				seen[ds.ServiceAccountName] = make(map[string]bool)
+			}
+			seen[ds.ServiceAccountName][ds.Namespace] = true
+		}
+	}
+	for _, sts := range config.StatefulSets {
+		if sts.ServiceAccountName != "" {
+			if seen[sts.ServiceAccountName] == nil {
+				seen[sts.ServiceAccountName] = make(map[string]bool)
+			}
+			seen[sts.ServiceAccountName][sts.Namespace] = true
 		}
 	}
 	for _, cj := range config.CronJobs {

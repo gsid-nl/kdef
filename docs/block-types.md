@@ -312,6 +312,108 @@ deployment "queue-consumer" {
 }
 ```
 
+## `daemonset` — Kubernetes DaemonSet
+
+Runs one pod per node. Useful for log collectors, metrics agents, and node-level networking components.
+
+The `daemonset` block accepts the same `container`, `init`, `volume`, `security_context`, and `service` sub-blocks as `deployment`. It does **not** support `scale`, `autoscale`, or `ingress` — DaemonSets have no replicas and are typically internal to the cluster.
+
+```hcl
+daemonset "node-exporter" {
+  namespace       = "monitoring"
+  service_account = "node-exporter"
+
+  container "exporter" {
+    image = "quay.io/prometheus/node-exporter:v1.8.0"
+
+    port "9100" "metrics" {
+      tcp_ready = true
+    }
+
+    resources {
+      cpu    = "50m..200m"
+      memory = "64Mi..128Mi"
+    }
+
+    volume "proc" {
+      mount_path = "/host/proc"
+      host_path  = "/proc"
+      read_only  = true
+    }
+  }
+
+  service {
+    port "9100" "metrics" {}
+  }
+}
+```
+
+## `statefulset` — Kubernetes StatefulSet
+
+Manages pods with stable identities (`pod-0`, `pod-1`, …) and per-pod persistent storage via `volume_claim` templates. Use for databases, message brokers, and other stateful workloads.
+
+A StatefulSet requires a `service_name` pointing at a governing headless Service. If you declare a `service` block whose name matches `service_name`, kdef emits it as a headless Service (`clusterIP: None`).
+
+```hcl
+statefulset "postgres" {
+  namespace    = "production"
+  service_name = "postgres"
+
+  scale {
+    replicas = 3
+  }
+
+  container "postgres" {
+    image = "postgres:16"
+
+    port "5432" "pg" {
+      tcp_ready = true
+    }
+
+    env {
+      POSTGRES_PASSWORD = secret("postgres", "password")
+    }
+
+    volume "data" {
+      mount_path = "/var/lib/postgresql/data"
+    }
+  }
+
+  # Per-pod persistent storage
+  volume_claim "data" {
+    mount_path    = "/var/lib/postgresql/data"
+    storage       = "50Gi"
+    storage_class = "fast-ssd"
+    access_modes  = ["ReadWriteOnce"]
+  }
+
+  # Governing headless service (matches service_name → emitted as ClusterIP=None)
+  service {
+    port "5432" "pg" {}
+  }
+}
+```
+
+### Attributes
+
+| Attribute               | Description                                                     |
+|-------------------------|-----------------------------------------------------------------|
+| `service_name`          | Name of the governing headless Service (required by Kubernetes)|
+| `pod_management_policy` | `OrderedReady` (default) or `Parallel`                          |
+
+### `volume_claim` block
+
+Declares a `volumeClaimTemplates` entry. Each replica gets its own PVC named `<template>-<sts>-<ordinal>`.
+
+| Attribute        | Required | Description                           |
+|------------------|----------|---------------------------------------|
+| `mount_path`     | yes      | Mount path inside the container       |
+| `storage`        | yes      | Storage size (e.g. `"10Gi"`)          |
+| `storage_class`  |          | StorageClass name                     |
+| `access_modes`   |          | Defaults to `["ReadWriteOnce"]`       |
+| `sub_path`       |          | Subpath within the volume             |
+| `read_only`      |          | Mount as read-only                    |
+
 ## `cronjob` — Kubernetes CronJob
 
 ```hcl
