@@ -15,6 +15,10 @@ type DaemonSetConfig struct {
 	SecurityContext    *SecurityContextConfig
 	NodeSelector       map[string]string
 	Tolerations        []TolerationConfig
+	HostNetwork        bool
+	HostPID            bool
+	HostIPC            bool
+	DNSPolicy          string
 	Service            *ServiceConfig
 	Raw                string
 }

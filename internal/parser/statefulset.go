@@ -12,19 +12,21 @@ func parseStatefulSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Statef
 		Replicas: 1,
 	}
 
+	attrs := []hcl.AttributeSchema{
+		{Name: "name"},
+		{Name: "namespace"},
+		{Name: "labels"},
+		{Name: "selector"},
+		{Name: "image_pull_secrets"},
+		{Name: "service_account"},
+		{Name: "service_name"},
+		{Name: "pod_management_policy"},
+		{Name: "node_selector"},
+		{Name: "raw"},
+	}
+	attrs = append(attrs, hostPodAttrs()...)
 	schema := &hcl.BodySchema{
-		Attributes: []hcl.AttributeSchema{
-			{Name: "name"},
-			{Name: "namespace"},
-			{Name: "labels"},
-			{Name: "selector"},
-			{Name: "image_pull_secrets"},
-			{Name: "service_account"},
-			{Name: "service_name"},
-			{Name: "pod_management_policy"},
-			{Name: "node_selector"},
-			{Name: "raw"},
-		},
+		Attributes: attrs,
 		Blocks: []hcl.BlockHeaderSchema{
 			{Type: "container", LabelNames: []string{"name"}},
 			{Type: "init", LabelNames: []string{"name"}},
@@ -133,6 +135,8 @@ func parseStatefulSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Statef
 			sts.NodeSelector = ns
 		}
 	}
+
+	diags = append(diags, parseHostPodAttrs(content, ctx, &sts.HostNetwork, &sts.HostPID, &sts.HostIPC, &sts.DNSPolicy)...)
 
 	for _, b := range content.Blocks {
 		switch b.Type {

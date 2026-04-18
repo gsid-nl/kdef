@@ -677,12 +677,40 @@ clusterrolebinding "promtail" {
 }
 ```
 
-## Pod scheduling: `toleration` and `node_selector`
+## Pod scheduling: `toleration`, `node_selector`, host namespaces
 
 All workload block types (`deployment`, `daemonset`, `statefulset`, `cronjob`) accept:
 
-- A top-level `node_selector` map — pods only schedule on nodes whose labels match.
-- Zero or more `toleration {}` sub-blocks — tolerate node taints.
+- `node_selector` — map; pods only schedule on nodes whose labels match.
+- `toleration {}` — zero or more sub-blocks; tolerate node taints.
+- `host_network`, `host_pid`, `host_ipc` — bool; share the host's network / PID / IPC namespace. Typical for DaemonSets that need node-level visibility (node-exporter, log collectors, CNI agents).
+- `dns_policy` — `ClusterFirst` (K8s default), `ClusterFirstWithHostNet` (use this with `host_network`), `Default`, or `None`.
+
+```hcl
+daemonset "node-exporter" {
+  namespace    = "monitoring"
+  host_network = true
+  host_pid     = true
+  dns_policy   = "ClusterFirstWithHostNet"
+
+  container "exporter" {
+    image = "quay.io/prometheus/node-exporter:v1.8.0"
+    args  = [
+      "--path.rootfs=/host",
+      "--web.listen-address=:9100",
+    ]
+    port "9100" "metrics" { tcp_ready = true }
+
+    volume "rootfs" {
+      mount_path = "/host"
+      host_path  = "/"
+      read_only  = true
+    }
+  }
+
+  toleration { operator = "Exists" effect = "NoSchedule" }
+}
+```
 
 ```hcl
 daemonset "gpu-driver" {

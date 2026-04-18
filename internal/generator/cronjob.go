@@ -88,6 +88,18 @@ func GenerateCronJob(cj types.CronJobConfig) *batchv1.CronJob {
 	if tols := buildTolerations(cj.Tolerations); len(tols) > 0 {
 		spec.Tolerations = tols
 	}
+	if cj.HostNetwork {
+		spec.HostNetwork = true
+	}
+	if cj.HostPID {
+		spec.HostPID = true
+	}
+	if cj.HostIPC {
+		spec.HostIPC = true
+	}
+	if cj.DNSPolicy != "" {
+		spec.DNSPolicy = corev1.DNSPolicy(cj.DNSPolicy)
+	}
 
 	concurrencyPolicy := batchv1.AllowConcurrent
 	switch cj.Concurrency {

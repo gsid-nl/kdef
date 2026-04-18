@@ -66,6 +66,7 @@ func renderDaemonSetBlock(group AppGroup) string {
 	}
 
 	writeNodeSelector(&b, podSpec.NodeSelector)
+	writeHostPodFlags(&b, podSpec)
 	writeTolerations(&b, podSpec.Tolerations)
 
 	if group.Service != nil {

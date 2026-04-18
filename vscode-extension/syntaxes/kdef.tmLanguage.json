@@ -71,7 +71,7 @@
       "patterns": [
         {
           "comment": "Known attribute names",
-          "match": "^\\s*(image|image_pull_policy|image_pull_secrets|namespace|name|command|args|schedule|concurrency|deadline|restart|container_name|service_account|selector|labels|host|hosts|tls|tls_secret|issuer|service_name|pod_management_policy|node_selector|mount_path|sub_path|read_only|secret|config_map|empty_dir|pvc|host_path|host_path_type|health|ready|tcp_health|tcp_ready|initial_delay|period|timeout|failures|successes|cpu|memory|ephemeral_storage|target|type|prefix|condition|import|raw|run_as_user|run_as_group|run_as_non_root|read_only_root|fs_group|privileged|min|max|replicas|volumes|storage_class|access_modes|storage|deployments|key|operator|value|effect|toleration_seconds|kind|api_groups|resources|resource_names|verbs|non_resource_urls)\\s*=",
+          "match": "^\\s*(image|image_pull_policy|image_pull_secrets|namespace|name|command|args|schedule|concurrency|deadline|restart|container_name|service_account|selector|labels|host|hosts|tls|tls_secret|issuer|service_name|pod_management_policy|node_selector|host_network|host_pid|host_ipc|dns_policy|mount_path|sub_path|read_only|secret|config_map|empty_dir|pvc|host_path|host_path_type|health|ready|tcp_health|tcp_ready|initial_delay|period|timeout|failures|successes|cpu|memory|ephemeral_storage|target|type|prefix|condition|import|raw|run_as_user|run_as_group|run_as_non_root|read_only_root|fs_group|privileged|min|max|replicas|volumes|storage_class|access_modes|storage|deployments|key|operator|value|effect|toleration_seconds|kind|api_groups|resources|resource_names|verbs|non_resource_urls)\\s*=",
           "captures": {
             "1": { "name": "variable.other.property.kdef" }
           }

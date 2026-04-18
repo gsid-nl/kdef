@@ -116,6 +116,18 @@ func GenerateDeploymentV2(dep types.DeploymentConfig) []Manifest {
 	if tols := buildTolerations(dep.Tolerations); len(tols) > 0 {
 		spec.Tolerations = tols
 	}
+	if dep.HostNetwork {
+		spec.HostNetwork = true
+	}
+	if dep.HostPID {
+		spec.HostPID = true
+	}
+	if dep.HostIPC {
+		spec.HostIPC = true
+	}
+	if dep.DNSPolicy != "" {
+		spec.DNSPolicy = corev1.DNSPolicy(dep.DNSPolicy)
+	}
 
 	// Deployment
 	k8sDep := &appsv1.Deployment{

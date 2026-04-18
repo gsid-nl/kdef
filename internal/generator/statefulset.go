@@ -47,6 +47,10 @@ func GenerateStatefulSet(sts types.StatefulSetConfig) []Manifest {
 		SecurityContext:    sts.SecurityContext,
 		NodeSelector:       sts.NodeSelector,
 		Tolerations:        sts.Tolerations,
+		HostNetwork:        sts.HostNetwork,
+		HostPID:            sts.HostPID,
+		HostIPC:            sts.HostIPC,
+		DNSPolicy:          sts.DNSPolicy,
 	}, claimNames)
 
 	serviceName := sts.ServiceName
