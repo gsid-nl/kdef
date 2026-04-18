@@ -50,4 +50,18 @@ func TestGenerateDaemonSet(t *testing.T) {
 	if !strings.Contains(yaml, "quay.io/prometheus/node-exporter") {
 		t.Error("yaml missing image")
 	}
+
+	// status subresource fields must not leak into the rendered manifest —
+	// server-side apply rejects them.
+	for _, bad := range []string{
+		"status:",
+		"numberMisscheduled:",
+		"numberReady:",
+		"desiredNumberScheduled:",
+		"currentNumberScheduled:",
+	} {
+		if strings.Contains(yaml, bad) {
+			t.Errorf("rendered yaml leaked status field %q: kdef apply would fail", bad)
+		}
+	}
 }
