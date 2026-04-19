@@ -1,24 +1,64 @@
 #!/usr/bin/env bash
 # Release script for kdef. Bumps versions, runs tests, builds all artifacts,
-# and packages the VS Code extension, Helm chart, ArgoCD plugin, and binaries.
+# packages the VS Code extension, Helm chart, ArgoCD plugin, and binaries,
+# then commits, tags, pushes, builds+pushes Docker images to ghcr.io, and
+# creates the GitHub release with all artifacts attached.
 #
-# Usage: scripts/release.sh <version>   e.g. scripts/release.sh 0.6.4
+# Usage:
+#   scripts/release.sh <version>                    # full release
+#   scripts/release.sh <version> --build-only       # stop after artifacts
+#   scripts/release.sh <version> --no-docker        # skip image push
+#   scripts/release.sh <version> --no-gh-release    # skip GH release
+#   scripts/release.sh <version> --dry-run          # print side-effect cmds
 #
-# Does NOT push to docker registries, create git tags, or publish — those
-# steps are printed as reminders at the end.
+# Example: scripts/release.sh 0.6.4
 
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-  echo "usage: $0 <version>   (e.g. $0 0.6.4)" >&2
+BUILD_ONLY=0
+NO_DOCKER=0
+NO_GH_RELEASE=0
+DRY_RUN=0
+NEW_VERSION=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --build-only)    BUILD_ONLY=1 ;;
+    --no-docker)     NO_DOCKER=1 ;;
+    --no-gh-release) NO_GH_RELEASE=1 ;;
+    --dry-run)       DRY_RUN=1 ;;
+    -h|--help)
+      sed -n '2,13p' "$0" | sed 's/^# \?//'
+      exit 0 ;;
+    -*)
+      echo "error: unknown flag $arg" >&2
+      exit 1 ;;
+    *)
+      if [[ -z "$NEW_VERSION" ]]; then
+        NEW_VERSION="$arg"
+      else
+        echo "error: unexpected argument $arg" >&2
+        exit 1
+      fi ;;
+  esac
+done
+
+if [[ -z "$NEW_VERSION" ]]; then
+  echo "usage: $0 <version> [--build-only|--no-docker|--no-gh-release|--dry-run]" >&2
   exit 1
 fi
-
-NEW_VERSION="$1"
 if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo "error: version must be X.Y.Z, got $NEW_VERSION" >&2
   exit 1
 fi
+
+run() {
+  if (( DRY_RUN )); then
+    echo "DRY-RUN: $*"
+  else
+    "$@"
+  fi
+}
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -168,47 +208,126 @@ echo "    vscode-extension/kdef-${NEW_VERSION}.vsix"
 popd >/dev/null
 echo
 
+echo "==> Build phase complete."
+echo "    dist/ contains kdef + kdef-lsp binaries, .deb/.rpm/.apk packages"
+echo "    dist/charts/kdef-controller-${NEW_CHART_VERSION}.tgz"
+echo "    vscode-extension/kdef-${NEW_VERSION}.vsix"
+echo "    argocd-plugin/kdef (linux-amd64 binary staged for Docker build)"
+echo
+
+if (( BUILD_ONLY )); then
+  echo "==> --build-only: stopping before side-effects. Artifacts in dist/."
+  exit 0
+fi
+
 # -----------------------------------------------------------------------------
-# 8. Summary + manual steps
+# 8. Commit, tag, push
 # -----------------------------------------------------------------------------
-cat <<EOF
-================================================================================
-Release v${NEW_VERSION} artifacts built.
+if git diff --quiet && git diff --cached --quiet; then
+  echo "==> Nothing to commit — assuming release commit already exists."
+else
+  echo "==> Staging and committing release"
+  run git add -A
+  run git commit -m "Release v${NEW_VERSION}"
+fi
 
-  dist/kdef-linux-amd64, kdef-linux-arm64, kdef-darwin-{amd64,arm64}, kdef-windows-amd64.exe
-  dist/kdef-lsp-linux-amd64, ... (same platforms)
-  dist/kdef_${NEW_VERSION}_*.deb / *.rpm / *.apk
-  dist/charts/kdef-controller-${NEW_CHART_VERSION}.tgz
-  vscode-extension/kdef-${NEW_VERSION}.vsix
-  argocd-plugin/kdef (linux-amd64 binary for Docker build)
+if git rev-parse "v${NEW_VERSION}" >/dev/null 2>&1; then
+  echo "==> Tag v${NEW_VERSION} already exists locally — skipping tag"
+else
+  echo "==> Creating tag v${NEW_VERSION}"
+  run git tag "v${NEW_VERSION}"
+fi
 
-Remaining manual steps:
+echo "==> Pushing main + tags to origin"
+run git push origin main --tags
 
-  1. Update release-notes.md with a v${NEW_VERSION} section (if not done)
+# -----------------------------------------------------------------------------
+# 9. Build + push Docker images to ghcr.io
+# -----------------------------------------------------------------------------
+if (( ! NO_DOCKER )); then
+  echo "==> Building and pushing ArgoCD plugin image"
+  run docker buildx build --platform linux/amd64 --push \
+    -t "ghcr.io/gsid-nl/kdef-argocd-plugin:${NEW_VERSION}" \
+    -t "ghcr.io/gsid-nl/kdef-argocd-plugin:latest" \
+    -f argocd-plugin/Dockerfile argocd-plugin/
 
-  2. Review and commit:
-       git add -A
-       git status
-       git commit -m "Release v${NEW_VERSION}: <headline>"
+  echo "==> Building and pushing Flux controller image"
+  run docker buildx build --platform linux/amd64 --push \
+    -t "ghcr.io/gsid-nl/kdef-controller:${NEW_VERSION}" \
+    -t "ghcr.io/gsid-nl/kdef-controller:latest" \
+    -f flux-controller/Dockerfile .
+else
+  echo "==> --no-docker: skipping image build+push"
+fi
 
-  3. Tag and push:
-       git tag v${NEW_VERSION}
-       git push origin main --tags
+# -----------------------------------------------------------------------------
+# 10. Create GitHub release with artifacts attached
+# -----------------------------------------------------------------------------
+if (( ! NO_GH_RELEASE )); then
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "warning: gh not found — skipping GitHub release" >&2
+  elif gh release view "v${NEW_VERSION}" >/dev/null 2>&1; then
+    echo "==> GitHub release v${NEW_VERSION} already exists — skipping"
+  else
+    echo "==> Creating GitHub release v${NEW_VERSION}"
+    NOTES_FILE="$(mktemp)"
+    trap 'rm -f "$NOTES_FILE"' EXIT
+    if [[ -f release-notes.md ]]; then
+      awk -v ver="v${NEW_VERSION}" '
+        $0 ~ "^## kdef " ver { flag=1; next }
+        /^---$/ && flag { exit }
+        /^## kdef v/ && flag { exit }
+        flag { print }
+      ' release-notes.md > "$NOTES_FILE"
+    fi
+    if [[ ! -s "$NOTES_FILE" ]]; then
+      echo "Release v${NEW_VERSION}." > "$NOTES_FILE"
+    fi
 
-  4. Build & push Docker images (registry-specific; see argocd-plugin/make,
-     flux-controller/Dockerfile — the placeholder 'your-registry.example.com'
-     must be replaced):
-       # ArgoCD plugin
-       docker buildx build --push -f argocd-plugin/Dockerfile \\
-         -t <registry>/kdef-argocd-plugin:${NEW_VERSION} \\
-         -t <registry>/kdef-argocd-plugin:latest argocd-plugin/
-       # Flux controller
-       docker buildx build --push -f flux-controller/Dockerfile \\
-         -t ghcr.io/gsid-nl/kdef-controller:${NEW_VERSION} .
+    # Collect artifacts — glob so we don't hard-code filenames.
+    shopt -s nullglob
+    ARTIFACTS=(
+      dist/kdef-linux-amd64
+      dist/kdef-linux-arm64
+      dist/kdef-darwin-amd64
+      dist/kdef-darwin-arm64
+      dist/kdef-windows-amd64.exe
+      dist/kdef-lsp-linux-amd64
+      dist/kdef-lsp-linux-arm64
+      dist/kdef-lsp-darwin-amd64
+      dist/kdef-lsp-darwin-arm64
+      dist/kdef-lsp-windows-amd64.exe
+    )
+    ARTIFACTS+=( dist/kdef_${NEW_VERSION}_*.deb )
+    ARTIFACTS+=( dist/kdef-${NEW_VERSION}-1.*.rpm )
+    ARTIFACTS+=( dist/kdef_${NEW_VERSION}_*.apk )
+    ARTIFACTS+=( dist/charts/kdef-controller-${NEW_CHART_VERSION}.tgz )
+    ARTIFACTS+=( vscode-extension/kdef-${NEW_VERSION}.vsix )
 
-  5. Publish VS Code extension (optional):
-       cd vscode-extension && npx vsce publish --packagePath kdef-${NEW_VERSION}.vsix
+    # Read headline from release-notes first line (skip blanks).
+    HEADLINE="$(head -3 "$NOTES_FILE" | grep -m1 -v '^$' || true)"
+    if [[ -z "$HEADLINE" ]]; then
+      TITLE="v${NEW_VERSION}"
+    else
+      TITLE="v${NEW_VERSION} — ${HEADLINE}"
+    fi
 
-  6. Create GitHub release with dist/ binaries + .vsix + chart .tgz attached.
-================================================================================
-EOF
+    run gh release create "v${NEW_VERSION}" \
+      --title "$TITLE" \
+      --notes-file "$NOTES_FILE" \
+      "${ARTIFACTS[@]}"
+  fi
+else
+  echo "==> --no-gh-release: skipping GitHub release"
+fi
+
+echo
+echo "================================================================================"
+echo "Release v${NEW_VERSION} complete."
+echo "  GitHub:       https://github.com/gsid-nl/kdef/releases/tag/v${NEW_VERSION}"
+echo "  Controller:   ghcr.io/gsid-nl/kdef-controller:${NEW_VERSION}"
+echo "  ArgoCD:       ghcr.io/gsid-nl/kdef-argocd-plugin:${NEW_VERSION}"
+echo
+echo "Optional next step:"
+echo "  cd vscode-extension && npx vsce publish --packagePath kdef-${NEW_VERSION}.vsix"
+echo "================================================================================"
