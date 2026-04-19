@@ -3,7 +3,7 @@ package types
 // RootConfig holds the parsed root.kdef configuration.
 type RootConfig struct {
 	Namespaces      []string
-	ServiceAccounts map[string]ServiceAccountConfig
+	ServiceAccounts []ServiceAccountConfig
 	IngressDefaults *IngressDefaults
 	Env             string            // global default --env
 	Set             map[string]string // global default --set overrides
@@ -11,8 +11,12 @@ type RootConfig struct {
 }
 
 // ServiceAccountConfig defines a service account with its imagePullSecrets.
+// Namespace is optional — an empty Namespace marks the declaration as a
+// default that applies to every namespace referencing this SA name unless a
+// more specific declaration (same Name, matching Namespace) exists.
 type ServiceAccountConfig struct {
 	Name             string
+	Namespace        string
 	ImagePullSecrets []string
 }
 

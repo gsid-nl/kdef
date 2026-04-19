@@ -24,11 +24,18 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 		result["namespace-"+ns] = []Manifest{{Object: GenerateNamespace(ns)}}
 	}
 
-	// ServiceAccounts — generate in each namespace where they're referenced
+	// ServiceAccounts — generate in each namespace where they're referenced.
+	// For each (name, namespace) pair, prefer a scoped service_account
+	// declaration (matching Namespace) and fall back to the default
+	// (empty Namespace) if one exists.
 	saNamespaces := collectServiceAccountNamespaces(config)
-	for _, sa := range config.ServiceAccounts {
-		for _, ns := range saNamespaces[sa.Name] {
-			key := "sa-" + sa.Name + "-" + ns
+	for name, namespaces := range saNamespaces {
+		for _, ns := range namespaces {
+			sa, ok := resolveServiceAccount(config.ServiceAccounts, name, ns)
+			if !ok {
+				continue
+			}
+			key := "sa-" + name + "-" + ns
 			result[key] = []Manifest{{Object: GenerateServiceAccount(sa, ns)}}
 		}
 	}
@@ -64,6 +71,28 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 		result["clusterrolebinding-"+crb.Name] = []Manifest{{Object: GenerateClusterRoleBinding(crb)}}
 	}
 	return result
+}
+
+// resolveServiceAccount picks the service_account declaration that applies
+// to a given (name, namespace) pair. A scoped declaration (matching
+// Namespace) wins over a default one (empty Namespace). Returns ok=false
+// if neither exists — caller should skip generation.
+func resolveServiceAccount(sas []types.ServiceAccountConfig, name, namespace string) (types.ServiceAccountConfig, bool) {
+	var fallback types.ServiceAccountConfig
+	haveFallback := false
+	for _, sa := range sas {
+		if sa.Name != name {
+			continue
+		}
+		if sa.Namespace == namespace {
+			return sa, true
+		}
+		if sa.Namespace == "" {
+			fallback = sa
+			haveFallback = true
+		}
+	}
+	return fallback, haveFallback
 }
 
 // collectServiceAccountNamespaces finds which namespaces each service account is used in.

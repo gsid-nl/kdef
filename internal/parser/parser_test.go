@@ -79,6 +79,110 @@ func TestLoadRootKdef(t *testing.T) {
 	}
 }
 
+func TestLoadRootKdef_ScopedServiceAccounts(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "app"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "mon"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "root.kdef"), []byte(`
+namespaces = ["production", "monitoring"]
+
+service_account "default" {
+  image_pull_secrets = ["shared"]
+}
+service_account "default" {
+  namespace          = "monitoring"
+  image_pull_secrets = ["mon-reg"]
+}
+
+deployments = {
+  "app" = {
+    path            = "app"
+    namespace       = "production"
+    service_account = "default"
+  }
+  "mon" = {
+    path            = "mon"
+    namespace       = "monitoring"
+    service_account = "default"
+  }
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "app", "app.kdef"), []byte(`
+deployment "app" {
+  container "app" {
+    image = "nginx"
+  }
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "mon", "mon.kdef"), []byte(`
+deployment "mon" {
+  container "mon" {
+    image = "nginx"
+  }
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config, err := Load(dir, nil)
+	if err != nil {
+		t.Fatalf("load error: %v", err)
+	}
+
+	if len(config.ServiceAccounts) != 2 {
+		t.Fatalf("expected 2 service_account entries, got %d", len(config.ServiceAccounts))
+	}
+}
+
+func TestLoadRootKdef_DuplicateServiceAccountRejected(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "app"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "root.kdef"), []byte(`
+namespaces = ["production"]
+
+service_account "default" {
+  image_pull_secrets = ["a"]
+}
+service_account "default" {
+  image_pull_secrets = ["b"]
+}
+
+deployments = {
+  "app" = { path = "app", namespace = "production" }
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "app", "app.kdef"), []byte(`
+deployment "app" {
+  container "app" {
+    image = "nginx"
+  }
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Load(dir, nil)
+	if err == nil {
+		t.Fatal("expected error for duplicate service_account")
+	}
+	if !strings.Contains(err.Error(), "Duplicate service_account") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
 func TestLoadRootKdefValidationError(t *testing.T) {
 	dir := t.TempDir()
 	subDir := filepath.Join(dir, "app")
