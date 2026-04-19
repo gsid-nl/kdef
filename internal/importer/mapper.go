@@ -205,6 +205,11 @@ func renderCronJobBlock(cj batchv1.CronJob) string {
 		b.WriteString(fmt.Sprintf("  deadline    = %q\n", formatDuration(*cj.Spec.StartingDeadlineSeconds)))
 	}
 
+	// Suspend
+	if cj.Spec.Suspend != nil && *cj.Spec.Suspend {
+		b.WriteString("  suspend     = true\n")
+	}
+
 	// RestartPolicy
 	if podSpec.RestartPolicy != "" && podSpec.RestartPolicy != corev1.RestartPolicyOnFailure {
 		b.WriteString(fmt.Sprintf("  restart = %q\n", string(podSpec.RestartPolicy)))

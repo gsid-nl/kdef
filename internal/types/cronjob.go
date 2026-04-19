@@ -26,4 +26,5 @@ type CronJobConfig struct {
 	Concurrency        string // "Allow", "Forbid", "Replace"
 	Deadline           string // e.g. "4m"
 	Restart            string // "OnFailure", "Never" (default: "OnFailure")
+	Suspend            *bool  // nil = omit from manifest (k8s default false)
 }

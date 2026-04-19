@@ -142,6 +142,10 @@ func GenerateCronJob(cj types.CronJobConfig) *batchv1.CronJob {
 		}
 	}
 
+	if cj.Suspend != nil {
+		cronJob.Spec.Suspend = cj.Suspend
+	}
+
 	return cronJob
 }
 

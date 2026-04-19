@@ -452,6 +452,7 @@ cronjob "send-reminders" {
   concurrency = "Forbid"    # Allow, Forbid, Replace
   deadline    = "4m"         # startingDeadlineSeconds
   restart     = "OnFailure"  # OnFailure (default), Never
+  suspend     = false        # when true, k8s skips scheduled runs (default false)
 
   env {
     APP_NAME = "reminder-worker"

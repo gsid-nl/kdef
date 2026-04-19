@@ -26,6 +26,7 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 		{Name: "concurrency"},
 		{Name: "deadline"},
 		{Name: "restart"},
+		{Name: "suspend"},
 	}
 	attrs = append(attrs, hostPodAttrs()...)
 	schema := &hcl.BodySchema{
@@ -77,6 +78,16 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 			if !moreDiags.HasErrors() {
 				*field.dest = val.AsString()
 			}
+		}
+	}
+
+	// Suspend (bool, optional)
+	if attr, ok := content.Attributes["suspend"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			b := val.True()
+			cj.Suspend = &b
 		}
 	}
 

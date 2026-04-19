@@ -421,6 +421,7 @@ var cronjobSchema = BlockSchema{
 		{Name: "concurrency", Doc: "Concurrency policy: Allow, Forbid, Replace"},
 		{Name: "deadline", Doc: "Starting deadline (e.g. \"4m\")"},
 		{Name: "restart", Doc: "Restart policy: OnFailure, Never"},
+		{Name: "suspend", Doc: "If true, Kubernetes skips scheduled runs (bool; default false)"},
 	},
 	SubBlocks: []BlockSchema{
 		envBlockSchema,
