@@ -1,4 +1,4 @@
-VERSION ?= 0.6.3
+VERSION ?= 0.6.4
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "nogit")
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -s -w \
@@ -43,7 +43,8 @@ completions: build
 	./kdef completion zsh  > completions/kdef.zsh
 	./kdef completion fish > completions/kdef.fish
 
-argocd-plugin: build-all
+argocd-plugin:
+	@test -x $(DIST)/kdef-linux-amd64 || $(MAKE) build-all
 	cp $(DIST)/kdef-linux-amd64 argocd-plugin/kdef
 
 package: build-all completions

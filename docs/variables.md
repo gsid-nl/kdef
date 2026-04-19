@@ -36,6 +36,24 @@ variable "environment" {
 
 Imported files can contain variables and `ingress_defaults`. Files are processed in order; later imports override earlier ones. `vars.kdef` itself always takes final precedence.
 
+### Scoping in multi-project repositories
+
+In a repo with a `root.kdef`, `vars.kdef` files at any directory level apply to that directory and all descendants. Resolution walks from the project root down to the subproject, with deeper levels overriding shallower ones on name collision.
+
+```
+logging/
+├── root.kdef
+├── vars.kdef                 # visible everywhere below
+├── monitoring/
+│   ├── vars.kdef             # visible in monitoring/** only; overrides root vars
+│   └── node-exporter/
+│       ├── vars.kdef         # overrides both above, but only here
+│       └── *.kdef
+└── alloy/*.kdef              # cannot see monitoring/vars.kdef
+```
+
+The same scoping rule applies to `images {}` blocks (see [Functions — `image()`](functions.md#image--image-registry)).
+
 ## Usage
 
 Variables are referenced as `var.name` in attribute values and `${var.name}` in string interpolation:

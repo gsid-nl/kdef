@@ -12,6 +12,69 @@ import (
 	"github.com/zclconf/go-cty/cty/function"
 )
 
+// ScanImagesWalk scans images {} blocks from rootDir down through every
+// intermediate directory to fromDir. Definitions closer to fromDir override
+// those from ancestor directories.
+//
+// If rootDir is empty or equal to fromDir, only fromDir is scanned.
+// rootDir must be an ancestor of (or equal to) fromDir; if not, only fromDir
+// is scanned to avoid surprising behavior.
+func ScanImagesWalk(fromDir, rootDir string) (map[string]string, error) {
+	images := make(map[string]string)
+
+	dirs, err := dirsFromRootToLeaf(fromDir, rootDir)
+	if err != nil {
+		return images, err
+	}
+
+	for _, d := range dirs {
+		found, err := ScanImages(d)
+		if err != nil {
+			return images, err
+		}
+		for k, v := range found {
+			images[k] = v
+		}
+	}
+	return images, nil
+}
+
+// dirsFromRootToLeaf returns the list of directories from rootDir down to
+// fromDir (inclusive on both ends), in order. Returns just [fromDir] if
+// rootDir is empty, equal to fromDir, or not an ancestor of fromDir.
+func dirsFromRootToLeaf(fromDir, rootDir string) ([]string, error) {
+	fromAbs, err := filepath.Abs(fromDir)
+	if err != nil {
+		return nil, err
+	}
+	if rootDir == "" {
+		return []string{fromAbs}, nil
+	}
+	rootAbs, err := filepath.Abs(rootDir)
+	if err != nil {
+		return nil, err
+	}
+	if rootAbs == fromAbs {
+		return []string{fromAbs}, nil
+	}
+
+	rel, err := filepath.Rel(rootAbs, fromAbs)
+	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
+		return []string{fromAbs}, nil
+	}
+
+	dirs := []string{rootAbs}
+	cur := rootAbs
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		if part == "" {
+			continue
+		}
+		cur = filepath.Join(cur, part)
+		dirs = append(dirs, cur)
+	}
+	return dirs, nil
+}
+
 // ScanImages scans all .kdef files in a directory for images {} blocks
 // and returns a map of image name → full image reference (registry/name:tag).
 func ScanImages(dir string) (map[string]string, error) {
