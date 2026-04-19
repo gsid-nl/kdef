@@ -46,61 +46,23 @@ func (s *Server) diagnoseDefinitionFile(filename string, content string) hcl.Dia
 	return diags
 }
 
-// buildEvalContext attempts to build an HCL eval context from vars.kdef.
-// Returns a minimal context if vars.kdef doesn't exist or fails to parse.
+// buildEvalContext attempts to build an HCL eval context from vars.kdef and
+// images {} blocks visible to the given directory. It walks upward to find
+// the project root (directory containing root.kdef), then merges vars/images
+// from every level on the path, with deeper levels winning on name collision.
+// Returns a minimal context on failure.
 func (s *Server) buildEvalContext(dir string) *hcl.EvalContext {
-	vars := make(map[string]types.VariableDecl)
+	rootDir := findRootDir(dir)
 
-	// Try local vars.kdef
-	varsFile := filepath.Join(dir, "vars.kdef")
-	if _, err := os.Stat(varsFile); err == nil {
-		// Check if we have an open (unsaved) version
-		varsURI := pathToURI(varsFile)
-		if doc := s.documents.Get(varsURI); doc != nil {
-			parsed, diags := parser.ParseVariableFileFromBytes([]byte(doc.Content), varsFile)
-			if !diags.HasErrors() {
-				for k, v := range parsed {
-					vars[k] = v
-				}
-			}
-		} else {
-			parsed, diags := parser.ParseVariableFile(varsFile)
-			if !diags.HasErrors() {
-				for k, v := range parsed {
-					vars[k] = v
-				}
-			}
-		}
+	loaded, _ := parser.LoadVariablesWalk(dir, rootDir, nil)
+	vars := loaded.Variables
+	if vars == nil {
+		vars = make(map[string]types.VariableDecl)
 	}
 
-	// Try root-level vars.kdef (one directory up, if root.kdef exists there)
-	parentDir := filepath.Dir(dir)
-	rootFile := filepath.Join(parentDir, "root.kdef")
-	if _, err := os.Stat(rootFile); err == nil {
-		rootVarsFile := filepath.Join(parentDir, "vars.kdef")
-		if _, err := os.Stat(rootVarsFile); err == nil {
-			parsed, diags := parser.ParseVariableFile(rootVarsFile)
-			if !diags.HasErrors() {
-				for k, v := range parsed {
-					if _, exists := vars[k]; !exists {
-						vars[k] = v
-					}
-				}
-			}
-		}
-	}
-
-	// Scan for images — root-level first, then local overrides
-	images := make(map[string]string)
-	if _, err := os.Stat(filepath.Join(parentDir, "root.kdef")); err == nil {
-		rootImages := scanImagesSafe(parentDir)
-		for k, v := range rootImages {
-			images[k] = v
-		}
-	}
-	localImages := scanImagesSafe(dir)
-	for k, v := range localImages {
-		images[k] = v
+	images, _ := parser.ScanImagesWalk(dir, rootDir)
+	if images == nil {
+		images = make(map[string]string)
 	}
 
 	// Build context — use lenient mode (empty overrides, no extra values)
@@ -110,6 +72,26 @@ func (s *Server) buildEvalContext(dir string) *hcl.EvalContext {
 		ctx, _ = parser.BuildEvalContext(make(map[string]types.VariableDecl), nil, nil, nil, dir)
 	}
 	return ctx
+}
+
+// findRootDir walks up from dir looking for a directory that contains
+// root.kdef. Returns the found directory, or "" if none is found before
+// reaching the filesystem root.
+func findRootDir(dir string) string {
+	cur, err := filepath.Abs(dir)
+	if err != nil {
+		return ""
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(cur, "root.kdef")); err == nil {
+			return cur
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return ""
+		}
+		cur = parent
+	}
 }
 
 // syntaxCheck does a basic HCL syntax check without schema validation.
@@ -189,25 +171,3 @@ func ptrSeverity(s protocol.DiagnosticSeverity) *protocol.DiagnosticSeverity {
 	return &s
 }
 
-// scanImagesSafe scans a directory for images blocks, tolerating parse errors in individual files.
-func scanImagesSafe(dir string) map[string]string {
-	images := make(map[string]string)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return images
-	}
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".kdef") {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
-		if err != nil {
-			continue
-		}
-		found := parser.ScanImagesFromBytes(data, entry.Name())
-		for k, v := range found {
-			images[k] = v
-		}
-	}
-	return images
-}

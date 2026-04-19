@@ -47,74 +47,17 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		Variables: make(map[string]types.VariableDecl),
 	}
 
-	// Phase 0: load root-level vars.kdef as base (lowest precedence)
-	if opts.RootDir != "" && opts.RootDir != opts.Dir {
-		rootVarsFile := filepath.Join(opts.RootDir, "vars.kdef")
-		if _, err := os.Stat(rootVarsFile); err == nil {
-			result, diags := ParseVariableFileWithImports(rootVarsFile)
-			if diags.HasErrors() {
-				return nil, diags
-			}
-			for _, importPath := range result.Imports {
-				importResult, diags := ParseVariableFileWithImports(importPath)
-				if diags.HasErrors() {
-					return nil, diags
-				}
-				for k, v := range importResult.Variables {
-					config.Variables[k] = v
-				}
-			}
-			for k, v := range result.Variables {
-				config.Variables[k] = v
-			}
-			if result.IngressDefaults != nil {
-				config.IngressDefaults = result.IngressDefaults
-			}
-		}
+	// Phase 0+1: walk from root down to leaf, loading vars.kdef at each level.
+	// Deeper levels override shallower ones on name collision.
+	loadedVars, diags := LoadVariablesWalk(opts.Dir, opts.RootDir, opts.VarsFrom)
+	if diags.HasErrors() {
+		return nil, diags
 	}
-
-	// Phase 1: parse local vars.kdef (overrides root-level)
-	varsFile := filepath.Join(opts.Dir, "vars.kdef")
-	if _, err := os.Stat(varsFile); err == nil {
-		result, diags := ParseVariableFileWithImports(varsFile)
-		if diags.HasErrors() {
-			return nil, diags
-		}
-
-		// Process imports first (imported vars have lower precedence)
-		for _, importPath := range result.Imports {
-			importResult, diags := ParseVariableFileWithImports(importPath)
-			if diags.HasErrors() {
-				return nil, diags
-			}
-			for k, v := range importResult.Variables {
-				config.Variables[k] = v
-			}
-			if importResult.IngressDefaults != nil && config.IngressDefaults == nil {
-				config.IngressDefaults = importResult.IngressDefaults
-			}
-		}
-
-		// CLI --vars-from (higher precedence than file imports)
-		for _, vf := range opts.VarsFrom {
-			vars, diags := ParseVariableFile(vf)
-			if diags.HasErrors() {
-				return nil, diags
-			}
-			for k, v := range vars {
-				config.Variables[k] = v
-			}
-		}
-
-		// Local vars override everything
-		for k, v := range result.Variables {
-			config.Variables[k] = v
-		}
-
-		// Capture ingress defaults
-		if result.IngressDefaults != nil {
-			config.IngressDefaults = result.IngressDefaults
-		}
+	for k, v := range loadedVars.Variables {
+		config.Variables[k] = v
+	}
+	if loadedVars.IngressDefaults != nil {
+		config.IngressDefaults = loadedVars.IngressDefaults
 	}
 
 	// Load extra values from JSON file
@@ -127,23 +70,10 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		}
 	}
 
-	// Pre-scan for images: root-level first, then local overrides
-	images := make(map[string]string)
-	if opts.RootDir != "" && opts.RootDir != opts.Dir {
-		rootImages, err := ScanImages(opts.RootDir)
-		if err != nil {
-			return nil, err
-		}
-		for k, v := range rootImages {
-			images[k] = v
-		}
-	}
-	localImages, err := ScanImages(opts.Dir)
+	// Pre-scan for images: walk from root down to leaf, deeper levels override.
+	images, err := ScanImagesWalk(opts.Dir, opts.RootDir)
 	if err != nil {
 		return nil, err
-	}
-	for k, v := range localImages {
-		images[k] = v
 	}
 
 	// Build EvalContext

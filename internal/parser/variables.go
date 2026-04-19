@@ -24,6 +24,85 @@ type VariableFileResult struct {
 	IngressDefaults *types.IngressDefaults
 }
 
+// LoadedVariables holds the merged result of walking vars.kdef files from a
+// root directory down to a leaf directory.
+type LoadedVariables struct {
+	Variables       map[string]types.VariableDecl
+	IngressDefaults *types.IngressDefaults
+}
+
+// LoadVariablesWalk loads vars.kdef files from rootDir down through every
+// intermediate directory to fromDir. At each level, imports apply first
+// (lowest precedence), then the file's own declarations. Deeper levels
+// override shallower levels on name collision.
+//
+// varsFromFiles is applied between imports and local vars at the deepest
+// level (preserving existing --vars-from semantics).
+//
+// If rootDir is empty or equal to fromDir, only fromDir is scanned.
+func LoadVariablesWalk(fromDir, rootDir string, varsFromFiles []string) (LoadedVariables, hcl.Diagnostics) {
+	var diags hcl.Diagnostics
+	loaded := LoadedVariables{Variables: make(map[string]types.VariableDecl)}
+
+	dirs, err := dirsFromRootToLeaf(fromDir, rootDir)
+	if err != nil {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Invalid directory for variable walk",
+			Detail:   err.Error(),
+		})
+		return loaded, diags
+	}
+
+	for i, d := range dirs {
+		varsFile := filepath.Join(d, "vars.kdef")
+		if _, err := os.Stat(varsFile); err != nil {
+			continue
+		}
+		result, moreDiags := ParseVariableFileWithImports(varsFile)
+		diags = append(diags, moreDiags...)
+		if moreDiags.HasErrors() {
+			return loaded, diags
+		}
+
+		for _, importPath := range result.Imports {
+			importResult, moreDiags := ParseVariableFileWithImports(importPath)
+			diags = append(diags, moreDiags...)
+			if moreDiags.HasErrors() {
+				return loaded, diags
+			}
+			for k, v := range importResult.Variables {
+				loaded.Variables[k] = v
+			}
+			if importResult.IngressDefaults != nil && loaded.IngressDefaults == nil {
+				loaded.IngressDefaults = importResult.IngressDefaults
+			}
+		}
+
+		if i == len(dirs)-1 {
+			for _, vf := range varsFromFiles {
+				vars, moreDiags := ParseVariableFile(vf)
+				diags = append(diags, moreDiags...)
+				if moreDiags.HasErrors() {
+					return loaded, diags
+				}
+				for k, v := range vars {
+					loaded.Variables[k] = v
+				}
+			}
+		}
+
+		for k, v := range result.Variables {
+			loaded.Variables[k] = v
+		}
+		if result.IngressDefaults != nil {
+			loaded.IngressDefaults = result.IngressDefaults
+		}
+	}
+
+	return loaded, diags
+}
+
 // ParseVariableFile parses a .kdef file containing variable declarations and import statements.
 func ParseVariableFile(filename string) (map[string]types.VariableDecl, hcl.Diagnostics) {
 	result, diags := ParseVariableFileWithImports(filename)
