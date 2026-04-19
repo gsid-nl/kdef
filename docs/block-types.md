@@ -13,6 +13,15 @@ service_account "default" {
   image_pull_secrets = ["registrykey"]
 }
 
+# Optional: scope a service_account to a specific namespace.
+# When a scoped block exists, it wins over the default for that namespace.
+# Useful when the same SA name (e.g. "default") needs different
+# image_pull_secrets per namespace.
+service_account "default" {
+  namespace          = "monitoring"
+  image_pull_secrets = ["monitoring-registry"]
+}
+
 ingress_defaults {
   tls    = true
   issuer = "letsencrypt-production"

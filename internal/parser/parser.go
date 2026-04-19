@@ -342,10 +342,12 @@ func validateNamespaces(config *types.KdefConfig, root *types.RootConfig) error 
 	}
 	hasAllowList := len(allowed) > 0
 
-	// Also validate service_account references
+	// Also validate service_account references. An SA "name" is considered
+	// defined if there's at least one service_account block with that name
+	// (scoped or default).
 	definedSAs := make(map[string]bool)
-	for name := range root.ServiceAccounts {
-		definedSAs[name] = true
+	for _, sa := range root.ServiceAccounts {
+		definedSAs[sa.Name] = true
 	}
 
 	check := func(kind, name, namespace string) error {
@@ -563,9 +565,7 @@ func parseRootFile(filename string) (*types.RootConfig, error) {
 		return nil, diags
 	}
 
-	root := &types.RootConfig{
-		ServiceAccounts: make(map[string]types.ServiceAccountConfig),
-	}
+	root := &types.RootConfig{}
 
 	// Parse namespaces
 	if attr, ok := content.Attributes["namespaces"]; ok {
@@ -602,14 +602,27 @@ func parseRootFile(filename string) (*types.RootConfig, error) {
 	}
 
 	// Parse blocks
+	seenSA := make(map[string]bool) // key: name + "\x00" + namespace
 	for _, block := range content.Blocks {
 		switch block.Type {
 		case "service_account":
 			sa, moreDiags := parseServiceAccountBlock(block)
 			diags = append(diags, moreDiags...)
-			if !moreDiags.HasErrors() {
-				root.ServiceAccounts[sa.Name] = sa
+			if moreDiags.HasErrors() {
+				continue
 			}
+			key := sa.Name + "\x00" + sa.Namespace
+			if seenSA[key] {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Duplicate service_account",
+					Detail:   fmt.Sprintf("service_account %q for namespace %q is defined more than once", sa.Name, sa.Namespace),
+					Subject:  block.DefRange.Ptr(),
+				})
+				continue
+			}
+			seenSA[key] = true
+			root.ServiceAccounts = append(root.ServiceAccounts, sa)
 		case "ingress_defaults":
 			id, moreDiags := parseIngressDefaultsBlock(block)
 			diags = append(diags, moreDiags...)
@@ -677,6 +690,7 @@ func parseServiceAccountBlock(block *hcl.Block) (types.ServiceAccountConfig, hcl
 
 	schema := &hcl.BodySchema{
 		Attributes: []hcl.AttributeSchema{
+			{Name: "namespace"},
 			{Name: "image_pull_secrets"},
 		},
 	}
@@ -684,6 +698,14 @@ func parseServiceAccountBlock(block *hcl.Block) (types.ServiceAccountConfig, hcl
 	content, diags := block.Body.Content(schema)
 	if diags.HasErrors() {
 		return sa, diags
+	}
+
+	if attr, ok := content.Attributes["namespace"]; ok {
+		val, moreDiags := attr.Expr.Value(nil)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			sa.Namespace = val.AsString()
+		}
 	}
 
 	if attr, ok := content.Attributes["image_pull_secrets"]; ok {
