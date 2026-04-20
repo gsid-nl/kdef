@@ -115,9 +115,12 @@ func buildVolume(v types.VolumeConfig) corev1.Volume {
 			},
 		}
 	case v.EmptyDir:
-		vol.VolumeSource = corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		ed := &corev1.EmptyDirVolumeSource{}
+		if v.EmptyDirSize != "" {
+			q := resource.MustParse(v.EmptyDirSize)
+			ed.SizeLimit = &q
 		}
+		vol.VolumeSource = corev1.VolumeSource{EmptyDir: ed}
 	case v.PVC != "":
 		vol.VolumeSource = corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{

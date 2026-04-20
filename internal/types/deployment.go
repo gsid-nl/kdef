@@ -50,6 +50,8 @@ type ContainerConfig struct {
 	Resources       *ResourcesConfig
 	Volumes         []VolumeConfig // container-specific volume mounts
 	SecurityContext *SecurityContextConfig
+	Probes          *ProbesConfig    // explicit liveness/readiness/startup probes
+	Lifecycle       *LifecycleConfig // preStop/postStart hooks
 }
 
 // ServiceConfig controls the generated Service resource.

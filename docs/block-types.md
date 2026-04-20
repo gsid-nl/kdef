@@ -140,6 +140,34 @@ deployment "web" {
       tcp_ready  = true
     }
 
+    # Explicit probes (liveness/readiness/startup) with exec, TCP, or HTTP.
+    # When present, these override any port-shorthand probes above.
+    probes {
+      liveness {
+        exec          = ["pgrep", "worker"]
+        initial_delay = 30
+        period        = 10
+      }
+      readiness {
+        http_get {
+          path = "/ready"
+          port = 8080
+        }
+      }
+      startup {
+        tcp_socket_port   = 8080
+        failure_threshold = 30
+      }
+    }
+
+    # Container lifecycle hooks
+    lifecycle {
+      pre_stop {
+        exec = ["/bin/sh", "-c", "sleep 10"]
+      }
+      # post_start { http_get { path = "/warmup" port = 8080 } }
+    }
+
     env {
       APP_ENV      = var.environment
       DATABASE_URL = secret("db-credentials", "url")
@@ -174,6 +202,7 @@ deployment "web" {
     volume "cache" {
       mount_path = "/tmp"
       empty_dir  = true
+      size_limit = "1Gi"              # optional: emptyDir sizeLimit
     }
 
     volume "certs" {

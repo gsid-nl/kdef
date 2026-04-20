@@ -522,6 +522,7 @@ func parseVolumeBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.VolumeConfi
 			{Name: "secret"},
 			{Name: "config_map"},
 			{Name: "empty_dir"},
+			{Name: "size_limit"},
 			{Name: "pvc"},
 			{Name: "host_path"},
 			{Name: "host_path_type"},
@@ -576,6 +577,14 @@ func parseVolumeBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.VolumeConfi
 		diags = append(diags, moreDiags...)
 		if !moreDiags.HasErrors() {
 			vol.EmptyDir = val.True()
+		}
+	}
+
+	if attr, ok := content.Attributes["size_limit"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			vol.EmptyDirSize = val.AsString()
 		}
 	}
 

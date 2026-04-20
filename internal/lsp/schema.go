@@ -232,6 +232,85 @@ var containerSchema = BlockSchema{
 		resourcesSchema,
 		volumeSchema,
 		securityContextSchema,
+		probesSchema,
+		lifecycleSchema,
+	},
+}
+
+var probeHandlerAttrs = []AttrSchema{
+	{Name: "exec", Doc: "Exec probe command (list of strings)"},
+	{Name: "tcp_socket_port", Doc: "TCP socket probe target port"},
+	{Name: "initial_delay", Doc: "Seconds before first probe (initialDelaySeconds)"},
+	{Name: "period", Doc: "Seconds between probes (periodSeconds)"},
+	{Name: "timeout", Doc: "Per-probe timeout in seconds (timeoutSeconds)"},
+	{Name: "failure_threshold", Doc: "Consecutive failures before restart (failureThreshold)"},
+	{Name: "success_threshold", Doc: "Consecutive successes required (successThreshold)"},
+}
+
+var httpGetSchema = BlockSchema{
+	Type: "http_get",
+	Doc:  "HTTP GET probe handler",
+	Attributes: []AttrSchema{
+		{Name: "path", Doc: "HTTP path", Required: true},
+		{Name: "port", Doc: "HTTP port", Required: true},
+	},
+}
+
+var livenessProbeSchema = BlockSchema{
+	Type:       "liveness",
+	Doc:        "Liveness probe",
+	Attributes: probeHandlerAttrs,
+	SubBlocks:  []BlockSchema{httpGetSchema},
+}
+
+var readinessProbeSchema = BlockSchema{
+	Type:       "readiness",
+	Doc:        "Readiness probe",
+	Attributes: probeHandlerAttrs,
+	SubBlocks:  []BlockSchema{httpGetSchema},
+}
+
+var startupProbeSchema = BlockSchema{
+	Type:       "startup",
+	Doc:        "Startup probe",
+	Attributes: probeHandlerAttrs,
+	SubBlocks:  []BlockSchema{httpGetSchema},
+}
+
+var probesSchema = BlockSchema{
+	Type: "probes",
+	Doc:  "Container probes: liveness, readiness, startup",
+	SubBlocks: []BlockSchema{
+		livenessProbeSchema,
+		readinessProbeSchema,
+		startupProbeSchema,
+	},
+}
+
+var lifecycleHandlerAttrs = []AttrSchema{
+	{Name: "exec", Doc: "Exec command (list of strings)"},
+}
+
+var preStopSchema = BlockSchema{
+	Type:       "pre_stop",
+	Doc:        "preStop lifecycle hook",
+	Attributes: lifecycleHandlerAttrs,
+	SubBlocks:  []BlockSchema{httpGetSchema},
+}
+
+var postStartSchema = BlockSchema{
+	Type:       "post_start",
+	Doc:        "postStart lifecycle hook",
+	Attributes: lifecycleHandlerAttrs,
+	SubBlocks:  []BlockSchema{httpGetSchema},
+}
+
+var lifecycleSchema = BlockSchema{
+	Type: "lifecycle",
+	Doc:  "Container lifecycle hooks",
+	SubBlocks: []BlockSchema{
+		preStopSchema,
+		postStartSchema,
 	},
 }
 
@@ -324,6 +403,7 @@ var volumeSchema = BlockSchema{
 		{Name: "secret", Doc: "Secret name as volume source"},
 		{Name: "config_map", Doc: "ConfigMap name as volume source"},
 		{Name: "empty_dir", Doc: "Use ephemeral empty directory (bool)"},
+		{Name: "size_limit", Doc: `Size limit for emptyDir (e.g. "1Gi"); ignored unless empty_dir is true`},
 		{Name: "pvc", Doc: "PersistentVolumeClaim name"},
 		{Name: "host_path", Doc: "Host path to mount"},
 		{Name: "host_path_type", Doc: `Host path type: "DirectoryOrCreate", "FileOrCreate", "Directory", "File", "Socket", etc.`},
@@ -516,6 +596,14 @@ func init() {
 	registerBlock(&resourcesSchema)
 	registerBlock(&volumeSchema)
 	registerBlock(&securityContextSchema)
+	registerBlock(&probesSchema)
+	registerBlock(&livenessProbeSchema)
+	registerBlock(&readinessProbeSchema)
+	registerBlock(&startupProbeSchema)
+	registerBlock(&httpGetSchema)
+	registerBlock(&lifecycleSchema)
+	registerBlock(&preStopSchema)
+	registerBlock(&postStartSchema)
 }
 
 func registerBlock(b *BlockSchema) {
