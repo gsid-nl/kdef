@@ -23,7 +23,17 @@ type DeploymentConfig struct {
 	Service            *ServiceConfig
 	Ingress            *IngressConfig
 	Autoscale          *AutoscaleConfig
+	Rollout            *RolloutConfig
 	Raw                string
+}
+
+// RolloutConfig controls Deployment rollout behavior and history retention.
+type RolloutConfig struct {
+	RevisionHistoryLimit *int32
+	Strategy             string // "RollingUpdate" (default) or "Recreate"
+	MaxSurge             string // int or percentage string, e.g. "25%" or "1"
+	MaxUnavailable       string
+	ProgressDeadline     *int32 // seconds
 }
 
 // ContainerConfig represents a container within a deployment.
