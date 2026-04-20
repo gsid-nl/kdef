@@ -291,6 +291,16 @@ deployment "web" {
     memory = 80    # target memory utilization %
   }
 
+  # --- Rollout & history ---
+
+  rollout {
+    revision_history_limit = 3             # old ReplicaSets to keep (K8s default: 10)
+    strategy               = "RollingUpdate" # or "Recreate"
+    max_surge              = "25%"         # int or percentage string
+    max_unavailable        = 1
+    progress_deadline      = 600           # seconds before rollout is marked failed
+  }
+
   # --- Raw YAML Escape Hatch ---
 
   raw = <<-EOT

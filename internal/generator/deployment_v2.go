@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"strconv"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -153,6 +155,7 @@ func GenerateDeploymentV2(dep types.DeploymentConfig) []Manifest {
 			},
 		},
 	}
+	applyRollout(k8sDep, dep.Rollout)
 	manifests = append(manifests, Manifest{Object: k8sDep, Raw: dep.Raw})
 
 	// Service — generated if any container has ports and service block exists (or implicit)
@@ -357,4 +360,46 @@ func hasPorts(dep types.DeploymentConfig) bool {
 		}
 	}
 	return false
+}
+
+func applyRollout(d *appsv1.Deployment, r *types.RolloutConfig) {
+	if r == nil {
+		return
+	}
+	if r.RevisionHistoryLimit != nil {
+		d.Spec.RevisionHistoryLimit = r.RevisionHistoryLimit
+	}
+	if r.ProgressDeadline != nil {
+		d.Spec.ProgressDeadlineSeconds = r.ProgressDeadline
+	}
+	if r.Strategy == "" && r.MaxSurge == "" && r.MaxUnavailable == "" {
+		return
+	}
+	strategy := appsv1.DeploymentStrategy{}
+	switch r.Strategy {
+	case "Recreate":
+		strategy.Type = appsv1.RecreateDeploymentStrategyType
+	case "RollingUpdate", "":
+		strategy.Type = appsv1.RollingUpdateDeploymentStrategyType
+	}
+	if strategy.Type == appsv1.RollingUpdateDeploymentStrategyType && (r.MaxSurge != "" || r.MaxUnavailable != "") {
+		ru := &appsv1.RollingUpdateDeployment{}
+		if r.MaxSurge != "" {
+			v := parseIntOrPercent(r.MaxSurge)
+			ru.MaxSurge = &v
+		}
+		if r.MaxUnavailable != "" {
+			v := parseIntOrPercent(r.MaxUnavailable)
+			ru.MaxUnavailable = &v
+		}
+		strategy.RollingUpdate = ru
+	}
+	d.Spec.Strategy = strategy
+}
+
+func parseIntOrPercent(s string) intstr.IntOrString {
+	if n, err := strconv.Atoi(s); err == nil {
+		return intstr.FromInt(n)
+	}
+	return intstr.FromString(s)
 }

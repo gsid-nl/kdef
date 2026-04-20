@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/zclconf/go-cty/cty"
 
 	"github.com/gsid-nl/kdef/internal/types"
 )
@@ -37,6 +38,7 @@ func parseDeploymentBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Deploym
 			{Type: "service"},
 			{Type: "ingress"},
 			{Type: "autoscale"},
+			{Type: "rollout"},
 			{Type: "toleration"},
 		},
 	}
@@ -191,6 +193,12 @@ func parseDeploymentBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Deploym
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				dep.Autoscale = &as
+			}
+		case "rollout":
+			r, moreDiags := parseRolloutBlock(b, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				dep.Rollout = &r
 			}
 		case "toleration":
 			t, moreDiags := parseTolerationBlock(b, ctx)
@@ -408,4 +416,89 @@ func parseServicePortBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Servic
 	}
 
 	return sp, diags
+}
+
+func parseRolloutBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.RolloutConfig, hcl.Diagnostics) {
+	r := types.RolloutConfig{}
+
+	schema := &hcl.BodySchema{
+		Attributes: []hcl.AttributeSchema{
+			{Name: "revision_history_limit"},
+			{Name: "strategy"},
+			{Name: "max_surge"},
+			{Name: "max_unavailable"},
+			{Name: "progress_deadline"},
+		},
+	}
+
+	content, diags := block.Body.Content(schema)
+	if diags.HasErrors() {
+		return r, diags
+	}
+
+	if attr, ok := content.Attributes["revision_history_limit"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			n, _ := val.AsBigFloat().Int64()
+			v := int32(n)
+			r.RevisionHistoryLimit = &v
+		}
+	}
+
+	if attr, ok := content.Attributes["strategy"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			s := val.AsString()
+			if s != "RollingUpdate" && s != "Recreate" {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Invalid rollout strategy",
+					Detail:   fmt.Sprintf("strategy %q must be either %q or %q", s, "RollingUpdate", "Recreate"),
+					Subject:  attr.Range.Ptr(),
+				})
+			} else {
+				r.Strategy = s
+			}
+		}
+	}
+
+	if attr, ok := content.Attributes["max_surge"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			if val.Type() == cty.Number {
+				n, _ := val.AsBigFloat().Int64()
+				r.MaxSurge = strconv.FormatInt(n, 10)
+			} else {
+				r.MaxSurge = val.AsString()
+			}
+		}
+	}
+
+	if attr, ok := content.Attributes["max_unavailable"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			if val.Type() == cty.Number {
+				n, _ := val.AsBigFloat().Int64()
+				r.MaxUnavailable = strconv.FormatInt(n, 10)
+			} else {
+				r.MaxUnavailable = val.AsString()
+			}
+		}
+	}
+
+	if attr, ok := content.Attributes["progress_deadline"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			n, _ := val.AsBigFloat().Int64()
+			v := int32(n)
+			r.ProgressDeadline = &v
+		}
+	}
+
+	return r, diags
 }
