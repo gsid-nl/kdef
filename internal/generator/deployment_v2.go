@@ -333,7 +333,97 @@ func buildContainerV2(c types.ContainerConfig) corev1.Container {
 		container.SecurityContext = buildSecurityContext(c.SecurityContext)
 	}
 
+	applyExplicitProbes(&container, c.Probes)
+	applyLifecycle(&container, c.Lifecycle)
+
 	return container
+}
+
+// applyExplicitProbes overrides any port-shorthand probes with explicit probe
+// configs when provided. Explicit `probes {}` block always wins.
+func applyExplicitProbes(container *corev1.Container, p *types.ProbesConfig) {
+	if p == nil {
+		return
+	}
+	if p.Liveness != nil {
+		container.LivenessProbe = buildProbe(p.Liveness)
+	}
+	if p.Readiness != nil {
+		container.ReadinessProbe = buildProbe(p.Readiness)
+	}
+	if p.Startup != nil {
+		container.StartupProbe = buildProbe(p.Startup)
+	}
+}
+
+func buildProbe(pc *types.ProbeConfig) *corev1.Probe {
+	probe := &corev1.Probe{}
+	switch {
+	case pc.HTTPPath != "":
+		probe.ProbeHandler = corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: pc.HTTPPath,
+				Port: intstr.FromInt32(pc.HTTPPort),
+			},
+		}
+	case pc.TCPPort > 0:
+		probe.ProbeHandler = corev1.ProbeHandler{
+			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt32(pc.TCPPort)},
+		}
+	case len(pc.Exec) > 0:
+		probe.ProbeHandler = corev1.ProbeHandler{
+			Exec: &corev1.ExecAction{Command: pc.Exec},
+		}
+	}
+	if pc.InitialDelay != nil {
+		probe.InitialDelaySeconds = *pc.InitialDelay
+	}
+	if pc.Period != nil {
+		probe.PeriodSeconds = *pc.Period
+	}
+	if pc.Timeout != nil {
+		probe.TimeoutSeconds = *pc.Timeout
+	}
+	if pc.Failures != nil {
+		probe.FailureThreshold = *pc.Failures
+	}
+	if pc.Successes != nil {
+		probe.SuccessThreshold = *pc.Successes
+	}
+	return probe
+}
+
+func applyLifecycle(container *corev1.Container, lc *types.LifecycleConfig) {
+	if lc == nil {
+		return
+	}
+	out := &corev1.Lifecycle{}
+	if lc.PreStop != nil {
+		out.PreStop = buildLifecycleHandler(lc.PreStop)
+	}
+	if lc.PostStart != nil {
+		out.PostStart = buildLifecycleHandler(lc.PostStart)
+	}
+	if out.PreStop != nil || out.PostStart != nil {
+		container.Lifecycle = out
+	}
+}
+
+func buildLifecycleHandler(h *types.LifecycleHandler) *corev1.LifecycleHandler {
+	switch {
+	case h.HTTPPath != "":
+		return &corev1.LifecycleHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: h.HTTPPath,
+				Port: intstr.FromInt32(h.HTTPPort),
+			},
+		}
+	case len(h.Exec) > 0:
+		return &corev1.LifecycleHandler{
+			Exec: &corev1.ExecAction{Command: h.Exec},
+		}
+	}
+	return nil
 }
 
 // findVolume searches deployment-level volumes first, then container-level volumes.

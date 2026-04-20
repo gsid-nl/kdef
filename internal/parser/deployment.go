@@ -232,6 +232,8 @@ func parseContainerBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Containe
 			{Type: "resources"},
 			{Type: "volume", LabelNames: []string{"name"}},
 			{Type: "security_context"},
+			{Type: "probes"},
+			{Type: "lifecycle"},
 		},
 	}
 
@@ -324,6 +326,18 @@ func parseContainerBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Containe
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				c.SecurityContext = &sc
+			}
+		case "probes":
+			p, moreDiags := parseProbesBlock(b, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				c.Probes = &p
+			}
+		case "lifecycle":
+			lc, moreDiags := parseLifecycleBlock(b, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				c.Lifecycle = &lc
 			}
 		}
 	}

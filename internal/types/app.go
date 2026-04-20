@@ -76,9 +76,49 @@ type VolumeConfig struct {
 	Secret       string // secret name
 	ConfigMap    string // configmap name
 	EmptyDir     bool
+	EmptyDirSize string // size limit for emptyDir (e.g. "1Gi"); ignored unless EmptyDir is true
 	PVC          string // PersistentVolumeClaim name
 	HostPath     string // host path
 	HostPathType string // optional: DirectoryOrCreate, FileOrCreate, Directory, File, Socket, etc.
+}
+
+// ProbeConfig represents a Kubernetes probe (liveness, readiness, or startup).
+// Exactly one probe handler (HTTPGet/TCPSocket/Exec) should be set.
+type ProbeConfig struct {
+	// HTTPGet
+	HTTPPath string
+	HTTPPort int32
+	// TCPSocket
+	TCPPort int32
+	// Exec
+	Exec []string
+	// Tuning
+	InitialDelay *int32
+	Period       *int32
+	Timeout      *int32
+	Failures     *int32
+	Successes    *int32
+}
+
+// ProbesConfig groups the three container probe types.
+type ProbesConfig struct {
+	Liveness  *ProbeConfig
+	Readiness *ProbeConfig
+	Startup   *ProbeConfig
+}
+
+// LifecycleHandler represents a single K8s lifecycle hook (preStop or postStart).
+// Exactly one of Exec/HTTPPath must be set.
+type LifecycleHandler struct {
+	Exec     []string
+	HTTPPath string
+	HTTPPort int32
+}
+
+// LifecycleConfig groups the two container lifecycle hook types.
+type LifecycleConfig struct {
+	PreStop   *LifecycleHandler
+	PostStart *LifecycleHandler
 }
 
 // EnvEntry represents an environment variable — either a plain value, a secret reference, a configmap reference, or a downward-API field reference.
