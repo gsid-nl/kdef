@@ -2,8 +2,8 @@ apiVersion: v2
 name: kdef-controller
 description: Flux controller for rendering and applying kdef files
 type: application
-version: 0.2.7
-appVersion: "0.6.7"
+version: 0.2.8
+appVersion: "0.6.8"
 home: https://github.com/gsid-nl/kdef
 sources:
   - https://github.com/gsid-nl/kdef
