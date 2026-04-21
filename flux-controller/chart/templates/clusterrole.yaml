@@ -4,10 +4,10 @@ metadata:
   name: kdef-controller
 rules:
   # KdefRelease resources
-  - apiGroups: ["kdef.gsid.nl"]
+  - apiGroups: ["kdef.dev"]
     resources: ["kdefreleases"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["kdef.gsid.nl"]
+  - apiGroups: ["kdef.dev"]
     resources: ["kdefreleases/status"]
     verbs: ["get", "update", "patch"]
   # Flux source resources

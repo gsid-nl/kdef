@@ -51,7 +51,7 @@ func GenerateCertificate(app types.AppConfig) *unstructured.Unstructured {
 				"labels": map[string]interface{}{
 					"app.kubernetes.io/name":       app.Name,
 					"app.kubernetes.io/managed-by": "kdef",
-					"kdef.gsid.nl/version":         version.Version,
+					"kdef.dev/version":         version.Version,
 				},
 			},
 			"spec": map[string]interface{}{

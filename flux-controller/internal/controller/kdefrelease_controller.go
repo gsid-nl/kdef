@@ -50,8 +50,8 @@ type KdefReleaseReconciler struct {
 	HTTPClient *http.Client
 }
 
-// +kubebuilder:rbac:groups=kdef.gsid.nl,resources=kdefreleases,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=kdef.gsid.nl,resources=kdefreleases/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=kdef.dev,resources=kdefreleases,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=kdef.dev,resources=kdefreleases/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=source.toolkit.fluxcd.io,resources=gitrepositories;ocirepositories;buckets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=configmaps;secrets;services;serviceaccounts;namespaces;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;statefulsets,verbs=get;list;watch;create;update;patch;delete
