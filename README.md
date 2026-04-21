@@ -179,7 +179,7 @@ For syntax highlighting in JetBrains, install the [TextMate Bundles](https://plu
 kdef includes a Kubernetes controller for Flux. Define a `KdefRelease` CR pointing at a Flux `GitRepository` and the controller renders and applies your `.kdef` files automatically:
 
 ```yaml
-apiVersion: kdef.gsid.nl/v1alpha1
+apiVersion: kdef.dev/v1alpha1
 kind: KdefRelease
 metadata:
   name: my-app

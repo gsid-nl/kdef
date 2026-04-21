@@ -7,7 +7,7 @@ import (
 
 var (
 	// GroupVersion is the API group and version for kdef resources.
-	GroupVersion = schema.GroupVersion{Group: "kdef.gsid.nl", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: "kdef.dev", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add Go types to the GroupVersionResource scheme.
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}

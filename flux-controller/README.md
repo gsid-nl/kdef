@@ -30,7 +30,7 @@ spec:
 ### 2. Create a KdefRelease
 
 ```yaml
-apiVersion: kdef.gsid.nl/v1alpha1
+apiVersion: kdef.dev/v1alpha1
 kind: KdefRelease
 metadata:
   name: my-app

@@ -27,7 +27,7 @@ func GenerateSealedSecret(ss types.SealedSecretConfig) *unstructured.Unstructure
 				"name": ss.Name,
 				"labels": map[string]interface{}{
 					"app.kubernetes.io/managed-by": "kdef",
-					"kdef.gsid.nl/version":         version.Version,
+					"kdef.dev/version":         version.Version,
 				},
 			},
 			"spec": map[string]interface{}{
@@ -37,7 +37,7 @@ func GenerateSealedSecret(ss types.SealedSecretConfig) *unstructured.Unstructure
 						"name": ss.Name,
 						"labels": map[string]interface{}{
 							"app.kubernetes.io/managed-by": "kdef",
-							"kdef.gsid.nl/version":         version.Version,
+							"kdef.dev/version":         version.Version,
 						},
 					},
 					"type": secretType,

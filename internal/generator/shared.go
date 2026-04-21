@@ -12,7 +12,7 @@ import (
 // kdefLabels adds kdef managed-by and version labels to a label map.
 func kdefLabels(labels map[string]string) map[string]string {
 	labels["app.kubernetes.io/managed-by"] = "kdef"
-	labels["kdef.gsid.nl/version"] = version.Version
+	labels["kdef.dev/version"] = version.Version
 	return labels
 }
 
