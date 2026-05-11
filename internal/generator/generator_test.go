@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	networkingv1 "k8s.io/api/networking/v1"
+
 	"github.com/gsid-nl/kdef/internal/types"
 )
 
@@ -35,9 +37,11 @@ func fullDeployment() types.DeploymentConfig {
 				{Number: 8080, Name: "http", Target: 8080},
 			},
 		},
-		Ingress: &types.IngressConfig{
-			Host: "api.example.com",
-			TLS:  true,
+		Ingresses: []types.IngressConfig{
+			{
+				Host: "api.example.com",
+				TLS:  true,
+			},
 		},
 	}
 }
@@ -71,6 +75,53 @@ func TestGenerateDeploymentV2(t *testing.T) {
 	}
 	if !strings.Contains(yaml, "registry.example.com/my-app/api:v2.4.1") {
 		t.Error("yaml missing image")
+	}
+}
+
+func TestGenerateDeploymentV2_MultipleIngresses(t *testing.T) {
+	dep := types.DeploymentConfig{
+		Name: "web",
+		Containers: []types.ContainerConfig{
+			{
+				Name:  "web",
+				Image: "nginx:1.27",
+				Ports: []types.PortConfig{{Number: 80, Name: "http"}},
+			},
+		},
+		Ingresses: []types.IngressConfig{
+			{Host: "www.example.com", TLS: true},
+			{
+				Host: "example.com",
+				Annotations: map[string]string{
+					"nginx.ingress.kubernetes.io/permanent-redirect": "https://www.example.com$request_uri",
+				},
+			},
+		},
+	}
+
+	manifests := GenerateDeploymentV2(dep)
+
+	var ingressNames []string
+	for _, m := range manifests {
+		if ing, ok := m.Object.(*networkingv1.Ingress); ok {
+			ingressNames = append(ingressNames, ing.Name)
+		}
+	}
+
+	if len(ingressNames) != 2 {
+		t.Fatalf("expected 2 Ingress manifests, got %d (%v)", len(ingressNames), ingressNames)
+	}
+	if ingressNames[0] != "web" || ingressNames[1] != "web-2" {
+		t.Errorf("expected ingress names [web web-2], got %v", ingressNames)
+	}
+
+	yamlBytes, err := RenderYAML(manifests)
+	if err != nil {
+		t.Fatalf("render error: %v", err)
+	}
+	yaml := string(yamlBytes)
+	if !strings.Contains(yaml, "permanent-redirect") {
+		t.Error("redirect annotation missing from second ingress")
 	}
 }
 

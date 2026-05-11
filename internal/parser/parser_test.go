@@ -272,10 +272,10 @@ func TestLoadWithOverrides(t *testing.T) {
 	if dep.Containers[0].Image != "registry.example.com/acme/api:v1.0.0" {
 		t.Errorf("image: expected v1.0.0 override, got %q", dep.Containers[0].Image)
 	}
-	if dep.Ingress == nil {
+	if len(dep.Ingresses) == 0 {
 		t.Fatal("expected ingress block")
 	}
-	if dep.Ingress.Host != "api.acme.dev" {
-		t.Errorf("ingress host: expected api.acme.dev, got %q", dep.Ingress.Host)
+	if dep.Ingresses[0].Host != "api.acme.dev" {
+		t.Errorf("ingress host: expected api.acme.dev, got %q", dep.Ingresses[0].Host)
 	}
 }

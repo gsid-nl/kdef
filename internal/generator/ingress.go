@@ -1,9 +1,6 @@
 package generator
 
 import (
-	"fmt"
-	"strings"
-
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -16,7 +13,7 @@ func GenerateIngress(app types.AppConfig) *networkingv1.Ingress {
 		return nil
 	}
 
-	hosts := allHosts(app.Ingress)
+	hosts := app.Ingress.AllHosts()
 	if len(hosts) == 0 {
 		return nil
 	}
@@ -89,7 +86,7 @@ func GenerateIngress(app types.AppConfig) *networkingv1.Ingress {
 	if app.Ingress.TLS {
 		secretName := app.Ingress.TLSSecret
 		if secretName == "" {
-			secretName = fmt.Sprintf("%s-tls", strings.ReplaceAll(hosts[0], ".", "-"))
+			secretName = app.Ingress.CertificateSecretName()
 		}
 		ingress.Spec.TLS = []networkingv1.IngressTLS{
 			{
@@ -100,28 +97,6 @@ func GenerateIngress(app types.AppConfig) *networkingv1.Ingress {
 	}
 
 	return ingress
-}
-
-// allHosts returns the combined list of hosts from Host and Hosts fields.
-func allHosts(ing *types.IngressConfig) []string {
-	var hosts []string
-	if ing.Host != "" {
-		hosts = append(hosts, ing.Host)
-	}
-	for _, h := range ing.Hosts {
-		// Avoid duplicates
-		found := false
-		for _, existing := range hosts {
-			if existing == h {
-				found = true
-				break
-			}
-		}
-		if !found {
-			hosts = append(hosts, h)
-		}
-	}
-	return hosts
 }
 
 func ingressName(app types.AppConfig) string {

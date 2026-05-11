@@ -1,9 +1,6 @@
 package generator
 
 import (
-	"fmt"
-	"strings"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/gsid-nl/kdef/internal/types"
@@ -15,26 +12,22 @@ const defaultIssuer = "letsencrypt-production"
 // GenerateCertificate creates a cert-manager Certificate for an app.
 // Returns nil if the app has no ingress or TLS is not enabled.
 func GenerateCertificate(app types.AppConfig) *unstructured.Unstructured {
-	if app.Ingress == nil || !app.Ingress.TLS {
+	if app.Ingress == nil {
 		return nil
 	}
 
-	// If an existing TLS secret is specified, don't generate a Certificate
-	if app.Ingress.TLSSecret != "" {
+	secretName := app.Ingress.CertificateSecretName()
+	if secretName == "" {
+		// TLS disabled, explicit tls_secret, or no hosts — no Certificate.
 		return nil
 	}
 
-	hosts := allHosts(app.Ingress)
-	if len(hosts) == 0 {
-		return nil
-	}
+	hosts := app.Ingress.AllHosts()
 
 	issuer := app.Ingress.Issuer
 	if issuer == "" {
 		issuer = defaultIssuer
 	}
-
-	secretName := fmt.Sprintf("%s-tls", strings.ReplaceAll(hosts[0], ".", "-"))
 
 	// Build dnsNames as []interface{} for unstructured
 	dnsNames := make([]interface{}, len(hosts))

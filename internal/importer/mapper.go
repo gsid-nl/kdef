@@ -18,7 +18,7 @@ type AppGroup struct {
 	DaemonSet   *appsv1.DaemonSet
 	StatefulSet *appsv1.StatefulSet
 	Service     *corev1.Service
-	Ingress     *networkingv1.Ingress
+	Ingresses   []*networkingv1.Ingress
 }
 
 // ImportResult holds all generated kdef blocks.
@@ -96,16 +96,24 @@ func groupWorkloads(resources *ClusterResources) (deps, dsets, stsets []AppGroup
 		}
 	}
 
-	ingressByService := make(map[string]*networkingv1.Ingress)
+	ingressesByService := make(map[string][]*networkingv1.Ingress)
 	for i := range resources.Ingresses {
 		ing := &resources.Ingresses[i]
+		seen := make(map[string]struct{})
 		for _, rule := range ing.Spec.Rules {
-			if rule.HTTP != nil {
-				for _, path := range rule.HTTP.Paths {
-					if path.Backend.Service != nil {
-						ingressByService[path.Backend.Service.Name] = ing
-					}
+			if rule.HTTP == nil {
+				continue
+			}
+			for _, path := range rule.HTTP.Paths {
+				if path.Backend.Service == nil {
+					continue
 				}
+				svcName := path.Backend.Service.Name
+				if _, dup := seen[svcName]; dup {
+					continue
+				}
+				seen[svcName] = struct{}{}
+				ingressesByService[svcName] = append(ingressesByService[svcName], ing)
 			}
 		}
 	}
@@ -127,9 +135,7 @@ func groupWorkloads(resources *ClusterResources) (deps, dsets, stsets []AppGroup
 		group := AppGroup{Name: dep.Name, Deployment: dep}
 		group.Service = findService(dep.Name, dep.Labels)
 		if group.Service != nil {
-			if ing, ok := ingressByService[group.Service.Name]; ok {
-				group.Ingress = ing
-			}
+			group.Ingresses = ingressesByService[group.Service.Name]
 		}
 		deps = append(deps, group)
 	}
@@ -152,9 +158,7 @@ func groupWorkloads(resources *ClusterResources) (deps, dsets, stsets []AppGroup
 			}
 		}
 		if group.Service != nil {
-			if ing, ok := ingressByService[group.Service.Name]; ok {
-				group.Ingress = ing
-			}
+			group.Ingresses = ingressesByService[group.Service.Name]
 		}
 		stsets = append(stsets, group)
 	}

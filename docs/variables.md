@@ -111,7 +111,7 @@ kdef render --dir k8s/ --vars-from ../shared/vars.kdef
 
 ## Ingress Defaults
 
-Define shared ingress settings in `vars.kdef` (or an imported file) — every deployment's ingress inherits them:
+Define shared ingress settings in `vars.kdef` (or an imported file) — **every** `ingress {}` block on every deployment/statefulset inherits them. If a workload has multiple ingress blocks, each one gets the defaults independently:
 
 ```hcl
 ingress_defaults {

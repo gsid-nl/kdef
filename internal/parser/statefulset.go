@@ -196,7 +196,7 @@ func parseStatefulSetBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Statef
 			ing, moreDiags := parseIngressBlock(b, ctx)
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
-				sts.Ingress = &ing
+				sts.Ingresses = append(sts.Ingresses, ing)
 			}
 		case "toleration":
 			t, moreDiags := parseTolerationBlock(b, ctx)

@@ -216,26 +216,29 @@ func GenerateDeploymentV2(dep types.DeploymentConfig) []Manifest {
 		manifests = append(manifests, Manifest{Object: svc})
 	}
 
-	// Ingress
-	if dep.Ingress != nil {
-		// Convert to AppConfig-compatible for the ingress generator
-		// (reuse existing logic)
-		appCompat := types.AppConfig{
-			Name:      dep.Name,
-			Namespace: dep.Namespace,
-			Labels:    dep.Labels,
-			Selector:  dep.Selector,
-			Ingress:   dep.Ingress,
-		}
-		// Collect all ports from all containers for the ingress
+	// Ingress — one or more blocks. Each generates its own Ingress (and Certificate, if TLS).
+	if len(dep.Ingresses) > 0 {
+		var ports []types.PortConfig
 		for _, c := range dep.Containers {
-			appCompat.Ports = append(appCompat.Ports, c.Ports...)
+			ports = append(ports, c.Ports...)
 		}
-		if ing := GenerateIngress(appCompat); ing != nil {
-			manifests = append(manifests, Manifest{Object: ing})
-		}
-		if cert := GenerateCertificate(appCompat); cert != nil {
-			manifests = append(manifests, Manifest{Object: cert})
+		for i := range dep.Ingresses {
+			ingCfg := dep.Ingresses[i]
+			ingCfg.Name = ingCfg.ResourceName(dep.Name, i)
+			appCompat := types.AppConfig{
+				Name:      dep.Name,
+				Namespace: dep.Namespace,
+				Labels:    dep.Labels,
+				Selector:  dep.Selector,
+				Ports:     ports,
+				Ingress:   &ingCfg,
+			}
+			if ing := GenerateIngress(appCompat); ing != nil {
+				manifests = append(manifests, Manifest{Object: ing})
+			}
+			if cert := GenerateCertificate(appCompat); cert != nil {
+				manifests = append(manifests, Manifest{Object: cert})
+			}
 		}
 	}
 

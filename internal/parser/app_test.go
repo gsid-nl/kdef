@@ -106,11 +106,11 @@ deployment "my-api" {
 		t.Error("env: missing APP_ENV=production")
 	}
 
-	if dep.Ingress == nil {
-		t.Fatal("ingress: expected non-nil")
+	if len(dep.Ingresses) == 0 {
+		t.Fatal("ingress: expected at least one ingress block")
 	}
-	if dep.Ingress.Host != "api.example.com" {
-		t.Errorf("ingress host: expected 'api.example.com', got %q", dep.Ingress.Host)
+	if dep.Ingresses[0].Host != "api.example.com" {
+		t.Errorf("ingress host: expected 'api.example.com', got %q", dep.Ingresses[0].Host)
 	}
 }
 

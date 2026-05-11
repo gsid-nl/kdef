@@ -24,7 +24,7 @@ type StatefulSetConfig struct {
 	HostIPC             bool
 	DNSPolicy           string
 	Service             *ServiceConfig
-	Ingress             *IngressConfig
+	Ingresses           []IngressConfig
 	Raw                 string
 }
 

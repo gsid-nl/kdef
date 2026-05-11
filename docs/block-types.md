@@ -104,7 +104,7 @@ kdef apply --dir repo --env prod    # applies all apps
 
 ## `deployment` — Kubernetes Deployment
 
-The primary block type. Defines a Deployment with explicit containers, optional Service, and optional Ingress.
+The primary block type. Defines a Deployment with explicit containers, an optional Service, and zero or more Ingresses (one resource per `ingress {}` block).
 
 ```hcl
 deployment "web" {
@@ -280,9 +280,24 @@ deployment "web" {
   }
 
   # --- Ingress ---
+  #
+  # A deployment may have one or more `ingress {}` blocks. Each block produces
+  # one Kubernetes Ingress resource (and, when `tls = true` without an explicit
+  # `tls_secret`, one cert-manager Certificate).
+  #
+  # Resource naming rules:
+  #   - First block, no `name`  →  uses the deployment name (e.g. "web")
+  #   - Later blocks, no `name` →  appended with -2, -3, ... (e.g. "web-2")
+  #   - Set `name = "..."` to override explicitly
+  #
+  # kdef rejects (at parse time) any two ingresses whose resolved resource
+  # names — or whose derived cert-manager Certificate secret names — would
+  # collide within the same namespace. If you hit a Certificate collision,
+  # either change the first host of one block or set `tls_secret` to BYO the
+  # secret and skip Certificate generation.
 
   ingress {
-    name         = "web.example.com"    # K8s resource name
+    name         = "web"                # K8s resource name (override)
     service_name = "web-svc"            # backend service
     port         = 80                   # backend port
     host         = "web.example.com"
@@ -300,7 +315,17 @@ deployment "web" {
     }
   }
 
-  # Multiple hosts
+  # A second ingress on the same deployment — e.g. an apex → www redirect.
+  # Resource name is auto-suffixed: this becomes "web-2".
+  ingress {
+    host = "example.com"
+    annotations = {
+      "nginx.ingress.kubernetes.io/permanent-redirect" = "https://www.example.com$request_uri"
+    }
+  }
+
+  # Multiple hosts on a single Ingress resource.
+  # Resource name is auto-suffixed: "web-3".
   ingress {
     hosts = [
       "web.example.com",
