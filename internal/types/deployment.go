@@ -21,7 +21,7 @@ type DeploymentConfig struct {
 	HostIPC            bool
 	DNSPolicy          string // default "ClusterFirst"; typically "ClusterFirstWithHostNet" when HostNetwork is true
 	Service            *ServiceConfig
-	Ingress            *IngressConfig
+	Ingresses          []IngressConfig
 	Autoscale          *AutoscaleConfig
 	Rollout            *RolloutConfig
 	Raw                string

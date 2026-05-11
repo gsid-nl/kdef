@@ -116,8 +116,8 @@ func renderStatefulSetBlock(group AppGroup) string {
 		renderServiceBlock(&b, group.Service, group.Name)
 	}
 
-	if group.Ingress != nil {
-		writeIngress(&b, group.Ingress, group)
+	for _, ing := range group.Ingresses {
+		writeIngress(&b, ing, group)
 	}
 
 	b.WriteString("}\n")

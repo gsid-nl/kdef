@@ -1,5 +1,10 @@
 package types
 
+import (
+	"fmt"
+	"strings"
+)
+
 // AppConfig represents a fully parsed and evaluated app block.
 type AppConfig struct {
 	Name               string
@@ -56,6 +61,54 @@ type IngressConfig struct {
 	TLSSecret   string            // existing TLS secret name; if set, no Certificate is generated
 	Issuer      string            // cert-manager ClusterIssuer name (default: "letsencrypt-production")
 	Annotations map[string]string // nginx/traefik annotations
+}
+
+// AllHosts returns Host and Hosts merged, deduplicated, in declaration order.
+func (i IngressConfig) AllHosts() []string {
+	var hosts []string
+	seen := make(map[string]struct{})
+	add := func(h string) {
+		if h == "" {
+			return
+		}
+		if _, ok := seen[h]; ok {
+			return
+		}
+		seen[h] = struct{}{}
+		hosts = append(hosts, h)
+	}
+	add(i.Host)
+	for _, h := range i.Hosts {
+		add(h)
+	}
+	return hosts
+}
+
+// ResourceName returns the effective K8s Ingress resource name for the index-th
+// ingress block on a workload. If an explicit `name` is set it wins; otherwise
+// the first block uses the workload name and later blocks get a numeric suffix.
+func (i IngressConfig) ResourceName(workloadName string, index int) string {
+	if i.Name != "" {
+		return i.Name
+	}
+	if index == 0 {
+		return workloadName
+	}
+	return fmt.Sprintf("%s-%d", workloadName, index+1)
+}
+
+// CertificateSecretName returns the secret name that the cert-manager Certificate
+// generator will pick for this ingress, or "" when no Certificate is generated
+// (TLS disabled, an explicit tls_secret was supplied, or no hosts are set).
+func (i IngressConfig) CertificateSecretName() string {
+	if !i.TLS || i.TLSSecret != "" {
+		return ""
+	}
+	hosts := i.AllHosts()
+	if len(hosts) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s-tls", strings.ReplaceAll(hosts[0], ".", "-"))
 }
 
 type ResourcesConfig struct {

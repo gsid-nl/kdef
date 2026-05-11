@@ -106,22 +106,28 @@ func GenerateStatefulSet(sts types.StatefulSetConfig) []Manifest {
 		manifests = append(manifests, Manifest{Object: svc})
 	}
 
-	if sts.Ingress != nil {
-		appCompat := types.AppConfig{
-			Name:      sts.Name,
-			Namespace: sts.Namespace,
-			Labels:    sts.Labels,
-			Selector:  sts.Selector,
-			Ingress:   sts.Ingress,
-		}
+	if len(sts.Ingresses) > 0 {
+		var ports []types.PortConfig
 		for _, c := range sts.Containers {
-			appCompat.Ports = append(appCompat.Ports, c.Ports...)
+			ports = append(ports, c.Ports...)
 		}
-		if ing := GenerateIngress(appCompat); ing != nil {
-			manifests = append(manifests, Manifest{Object: ing})
-		}
-		if cert := GenerateCertificate(appCompat); cert != nil {
-			manifests = append(manifests, Manifest{Object: cert})
+		for i := range sts.Ingresses {
+			ingCfg := sts.Ingresses[i]
+			ingCfg.Name = ingCfg.ResourceName(sts.Name, i)
+			appCompat := types.AppConfig{
+				Name:      sts.Name,
+				Namespace: sts.Namespace,
+				Labels:    sts.Labels,
+				Selector:  sts.Selector,
+				Ports:     ports,
+				Ingress:   &ingCfg,
+			}
+			if ing := GenerateIngress(appCompat); ing != nil {
+				manifests = append(manifests, Manifest{Object: ing})
+			}
+			if cert := GenerateCertificate(appCompat); cert != nil {
+				manifests = append(manifests, Manifest{Object: cert})
+			}
 		}
 	}
 

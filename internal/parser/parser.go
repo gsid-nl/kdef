@@ -117,6 +117,11 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		applyIngressDefaults(config)
 	}
 
+	// Phase 3b: detect ingress conflicts (duplicate resource names or cert secret names)
+	if err := validateIngresses(config); err != nil {
+		return nil, err
+	}
+
 	// Phase 4: apply environment overrides if --env is specified
 	if opts.Env != "" {
 		envFile := filepath.Join(opts.Dir, "environments", opts.Env+".kdef")
@@ -260,6 +265,11 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	// Apply ingress defaults from root.kdef
 	if merged.IngressDefaults != nil {
 		applyIngressDefaults(merged)
+	}
+
+	// Detect ingress conflicts (duplicate resource names or cert secret names)
+	if err := validateIngresses(merged); err != nil {
+		return nil, err
 	}
 
 	return merged, nil
@@ -410,6 +420,67 @@ func validateNamespaces(config *types.KdefConfig, root *types.RootConfig) error 
 		}
 	}
 
+	return nil
+}
+
+// validateIngresses checks that no two ingress blocks across the config produce:
+//   - the same effective K8s Ingress resource name within a namespace, or
+//   - the same cert-manager Certificate secret name within a namespace
+//     (only generated when tls is on and tls_secret is not set).
+//
+// Conflicts are returned as a fatal error. The check runs after ingress_defaults
+// have been applied so that defaulted fields (TLS, TLSSecret) are accounted for.
+func validateIngresses(config *types.KdefConfig) error {
+	type origin struct {
+		kind     string
+		workload string
+		index    int
+	}
+
+	resourceNames := make(map[string]origin) // key: "namespace/name"
+	secretNames := make(map[string]origin)   // key: "namespace/secret"
+
+	check := func(kind, workload, namespace string, ingresses []types.IngressConfig) error {
+		// Detect duplicates *within* the workload too: e.g. two blocks both
+		// explicitly named "foo" would otherwise only collide cross-namespace.
+		localNames := make(map[string]int)
+		for i, ing := range ingresses {
+			name := ing.ResourceName(workload, i)
+			if prev, dup := localNames[name]; dup {
+				return fmt.Errorf("%s %q: ingress blocks #%d and #%d both resolve to resource name %q — set a distinct `name` on at least one",
+					kind, workload, prev+1, i+1, name)
+			}
+			localNames[name] = i
+
+			key := namespace + "/" + name
+			if prev, dup := resourceNames[key]; dup {
+				return fmt.Errorf("%s %q: ingress #%d resolves to resource name %q which is already used by %s %q (ingress #%d) in namespace %q",
+					kind, workload, i+1, name, prev.kind, prev.workload, prev.index+1, namespace)
+			}
+			resourceNames[key] = origin{kind: kind, workload: workload, index: i}
+
+			if secret := ing.CertificateSecretName(); secret != "" {
+				skey := namespace + "/" + secret
+				if prev, dup := secretNames[skey]; dup {
+					return fmt.Errorf("%s %q: ingress #%d would generate cert-manager Certificate secret %q which is already requested by %s %q (ingress #%d) in namespace %q — set `tls_secret` on one of them, or change the first host so the derived secret names differ",
+						kind, workload, i+1, secret, prev.kind, prev.workload, prev.index+1, namespace)
+				}
+				secretNames[skey] = origin{kind: kind, workload: workload, index: i}
+			}
+		}
+		return nil
+	}
+
+	for _, dep := range config.Deployments {
+		if err := check("deployment", dep.Name, dep.Namespace, dep.Ingresses); err != nil {
+			return err
+		}
+	}
+	for _, sts := range config.StatefulSets {
+		if err := check("statefulset", sts.Name, sts.Namespace, sts.Ingresses); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -879,9 +950,13 @@ func applyIngressDefaults(config *types.KdefConfig) {
 	}
 
 	for i := range config.Deployments {
-		apply(config.Deployments[i].Ingress)
+		for j := range config.Deployments[i].Ingresses {
+			apply(&config.Deployments[i].Ingresses[j])
+		}
 	}
 	for i := range config.StatefulSets {
-		apply(config.StatefulSets[i].Ingress)
+		for j := range config.StatefulSets[i].Ingresses {
+			apply(&config.StatefulSets[i].Ingresses[j])
+		}
 	}
 }

@@ -186,7 +186,7 @@ func parseDeploymentBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Deploym
 			ing, moreDiags := parseIngressBlock(b, ctx)
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
-				dep.Ingress = &ing
+				dep.Ingresses = append(dep.Ingresses, ing)
 			}
 		case "autoscale":
 			as, moreDiags := parseAutoscaleBlock(b, ctx)

@@ -89,9 +89,9 @@ func renderDeploymentBlock(group AppGroup) string {
 		renderServiceBlock(&b, group.Service, group.Name)
 	}
 
-	// Ingress
-	if group.Ingress != nil {
-		writeIngress(&b, group.Ingress, group)
+	// Ingresses — one or more
+	for _, ing := range group.Ingresses {
+		writeIngress(&b, ing, group)
 	}
 
 	b.WriteString("}\n")

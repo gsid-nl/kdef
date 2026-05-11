@@ -454,9 +454,9 @@ var servicePortSchema = BlockSchema{
 
 var ingressSchema = BlockSchema{
 	Type: "ingress",
-	Doc:  "Kubernetes Ingress",
+	Doc:  "Kubernetes Ingress. Repeatable per workload — each `ingress {}` block becomes its own Ingress resource (and Certificate when `tls = true` without `tls_secret`). Resource name defaults to the workload name on the first block and is auto-suffixed (-2, -3, ...) on later blocks.",
 	Attributes: []AttrSchema{
-		{Name: "name", Doc: "Ingress resource name"},
+		{Name: "name", Doc: "Ingress resource name (overrides the auto-derived name)"},
 		{Name: "service_name", Doc: "Backend service name"},
 		{Name: "port", Doc: "Backend port number"},
 		{Name: "host", Doc: "Single hostname"},
