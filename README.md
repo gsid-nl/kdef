@@ -3,6 +3,10 @@
   <img src="docs/assets/kdef-logo.svg" alt="kdef" width="420">
 </picture>
 
+[![Latest release](https://img.shields.io/github/v/release/gsid-nl/kdef)](https://github.com/gsid-nl/kdef/releases/latest)
+[![License](https://img.shields.io/github/license/gsid-nl/kdef)](LICENSE)
+[![Go version](https://img.shields.io/github/go-mod/go-version/gsid-nl/kdef)](go.mod)
+
 **Declarative Kubernetes configuration language.**
 
 kdef compiles human-readable `.kdef` files into standard Kubernetes YAML manifests. It sits between Kustomize (no variables, no loops) and Helm (too complex, opaque templates) — giving you typed variables, native loops, environment overrides, and transparent output.
