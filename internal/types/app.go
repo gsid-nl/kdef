@@ -60,7 +60,8 @@ type IngressConfig struct {
 	TLS         bool
 	TLSSecret   string            // existing TLS secret name; if set, no Certificate is generated
 	Issuer      string            // cert-manager ClusterIssuer name (default: "letsencrypt-production")
-	Annotations map[string]string // nginx/traefik annotations
+	Class       string            // ingressClassName (defaults to "nginx")
+	Annotations map[string]string // ingress annotations
 }
 
 // AllHosts returns Host and Hosts merged, deduplicated, in declaration order.

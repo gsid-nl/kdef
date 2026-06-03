@@ -284,6 +284,7 @@ func parseIngressBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.IngressCon
 			{Name: "tls"},
 			{Name: "tls_secret"},
 			{Name: "issuer"},
+			{Name: "class"},
 			{Name: "annotations"},
 		},
 	}
@@ -363,6 +364,14 @@ func parseIngressBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.IngressCon
 		diags = append(diags, moreDiags...)
 		if !moreDiags.HasErrors() {
 			ingress.Issuer = val.AsString()
+		}
+	}
+
+	if attr, ok := content.Attributes["class"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			ingress.Class = val.AsString()
 		}
 	}
 

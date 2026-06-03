@@ -19,7 +19,10 @@ func GenerateIngress(app types.AppConfig) *networkingv1.Ingress {
 	}
 
 	pathType := networkingv1.PathTypePrefix
-	ingressClassName := "nginx"
+	ingressClassName := app.Ingress.Class
+	if ingressClassName == "" {
+		ingressClassName = "nginx"
+	}
 
 	// Build paths from ports
 	// Backend service name — defaults to app name

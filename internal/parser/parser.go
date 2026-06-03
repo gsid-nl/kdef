@@ -802,6 +802,7 @@ func parseIngressDefaultsBlock(block *hcl.Block) (*types.IngressDefaults, hcl.Di
 			{Name: "tls"},
 			{Name: "tls_secret"},
 			{Name: "issuer"},
+			{Name: "class"},
 			{Name: "annotations"},
 		},
 	}
@@ -833,6 +834,14 @@ func parseIngressDefaultsBlock(block *hcl.Block) (*types.IngressDefaults, hcl.Di
 		diags = append(diags, moreDiags...)
 		if !moreDiags.HasErrors() {
 			id.Issuer = val.AsString()
+		}
+	}
+
+	if attr, ok := content.Attributes["class"]; ok {
+		val, moreDiags := attr.Expr.Value(nil)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			id.Class = val.AsString()
 		}
 	}
 
@@ -936,6 +945,9 @@ func applyIngressDefaults(config *types.KdefConfig) {
 		}
 		if defaults.Issuer != "" && ing.Issuer == "" {
 			ing.Issuer = defaults.Issuer
+		}
+		if defaults.Class != "" && ing.Class == "" {
+			ing.Class = defaults.Class
 		}
 		if len(defaults.Annotations) > 0 {
 			merged := make(map[string]string)

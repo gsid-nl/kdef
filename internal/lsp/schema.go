@@ -464,6 +464,7 @@ var ingressSchema = BlockSchema{
 		{Name: "tls", Doc: "Enable TLS (bool)"},
 		{Name: "tls_secret", Doc: "TLS secret name"},
 		{Name: "issuer", Doc: "Cert-manager issuer name"},
+		{Name: "class", Doc: "Ingress class name (defaults to \"nginx\")"},
 		{Name: "annotations", Doc: "Ingress annotations (map, supports nesting)"},
 	},
 }
