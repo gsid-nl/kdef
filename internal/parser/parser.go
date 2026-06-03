@@ -803,6 +803,9 @@ func parseIngressDefaultsBlock(block *hcl.Block) (*types.IngressDefaults, hcl.Di
 			{Name: "tls_secret"},
 			{Name: "issuer"},
 			{Name: "class"},
+			{Name: "mode"},
+			{Name: "gateway"},
+			{Name: "gateway_namespace"},
 			{Name: "annotations"},
 		},
 	}
@@ -842,6 +845,30 @@ func parseIngressDefaultsBlock(block *hcl.Block) (*types.IngressDefaults, hcl.Di
 		diags = append(diags, moreDiags...)
 		if !moreDiags.HasErrors() {
 			id.Class = val.AsString()
+		}
+	}
+
+	if attr, ok := content.Attributes["mode"]; ok {
+		val, moreDiags := attr.Expr.Value(nil)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			id.Mode = val.AsString()
+		}
+	}
+
+	if attr, ok := content.Attributes["gateway"]; ok {
+		val, moreDiags := attr.Expr.Value(nil)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			id.Gateway = val.AsString()
+		}
+	}
+
+	if attr, ok := content.Attributes["gateway_namespace"]; ok {
+		val, moreDiags := attr.Expr.Value(nil)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			id.GatewayNamespace = val.AsString()
 		}
 	}
 

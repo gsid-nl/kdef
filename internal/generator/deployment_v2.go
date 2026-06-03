@@ -12,7 +12,7 @@ import (
 )
 
 // GenerateDeploymentV2 creates all manifests from a DeploymentConfig.
-func GenerateDeploymentV2(dep types.DeploymentConfig) []Manifest {
+func GenerateDeploymentV2(dep types.DeploymentConfig, ingressDefaults *types.IngressDefaults) []Manifest {
 	var manifests []Manifest
 
 	// Labels
@@ -233,8 +233,19 @@ func GenerateDeploymentV2(dep types.DeploymentConfig) []Manifest {
 				Ports:     ports,
 				Ingress:   &ingCfg,
 			}
-			if ing := GenerateIngress(appCompat); ing != nil {
-				manifests = append(manifests, Manifest{Object: ing})
+			if ingressDefaults != nil {
+				appCompat.IngressMode = ingressDefaults.Mode
+				appCompat.IngressGateway = ingressDefaults.Gateway
+				appCompat.IngressGatewayNS = ingressDefaults.GatewayNamespace
+			}
+			if appCompat.IngressMode == "gateway" {
+				if route := GenerateHTTPRoute(appCompat); route != nil {
+					manifests = append(manifests, Manifest{Object: route})
+				}
+			} else {
+				if ing := GenerateIngress(appCompat); ing != nil {
+					manifests = append(manifests, Manifest{Object: ing})
+				}
 			}
 			if cert := GenerateCertificate(appCompat); cert != nil {
 				manifests = append(manifests, Manifest{Object: cert})

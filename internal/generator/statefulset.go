@@ -10,7 +10,7 @@ import (
 )
 
 // GenerateStatefulSet creates all manifests from a StatefulSetConfig.
-func GenerateStatefulSet(sts types.StatefulSetConfig) []Manifest {
+func GenerateStatefulSet(sts types.StatefulSetConfig, ingressDefaults *types.IngressDefaults) []Manifest {
 	var manifests []Manifest
 
 	labels := map[string]string{
@@ -122,8 +122,19 @@ func GenerateStatefulSet(sts types.StatefulSetConfig) []Manifest {
 				Ports:     ports,
 				Ingress:   &ingCfg,
 			}
-			if ing := GenerateIngress(appCompat); ing != nil {
-				manifests = append(manifests, Manifest{Object: ing})
+			if ingressDefaults != nil {
+				appCompat.IngressMode = ingressDefaults.Mode
+				appCompat.IngressGateway = ingressDefaults.Gateway
+				appCompat.IngressGatewayNS = ingressDefaults.GatewayNamespace
+			}
+			if appCompat.IngressMode == "gateway" {
+				if route := GenerateHTTPRoute(appCompat); route != nil {
+					manifests = append(manifests, Manifest{Object: route})
+				}
+			} else {
+				if ing := GenerateIngress(appCompat); ing != nil {
+					manifests = append(manifests, Manifest{Object: ing})
+				}
 			}
 			if cert := GenerateCertificate(appCompat); cert != nil {
 				manifests = append(manifests, Manifest{Object: cert})

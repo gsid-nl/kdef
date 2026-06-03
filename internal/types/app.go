@@ -20,6 +20,9 @@ type AppConfig struct {
 	Env                []EnvEntry
 	EnvFrom            []EnvFromEntry
 	Ingress            *IngressConfig
+	IngressMode        string // "ingress" (default) or "gateway"
+	IngressGateway     string // Gateway resource name (gateway mode)
+	IngressGatewayNS   string // Gateway resource namespace (gateway mode)
 	Resources          *ResourcesConfig
 	Volumes            []VolumeConfig
 	SecurityContext    *SecurityContextConfig

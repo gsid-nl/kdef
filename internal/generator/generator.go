@@ -41,13 +41,13 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 	}
 
 	for _, dep := range config.Deployments {
-		result[dep.Name] = GenerateDeploymentV2(dep)
+		result[dep.Name] = GenerateDeploymentV2(dep, config.IngressDefaults)
 	}
 	for _, ds := range config.DaemonSets {
 		result[ds.Name] = GenerateDaemonSet(ds)
 	}
 	for _, sts := range config.StatefulSets {
-		result[sts.Name] = GenerateStatefulSet(sts)
+		result[sts.Name] = GenerateStatefulSet(sts, config.IngressDefaults)
 	}
 	for _, cj := range config.CronJobs {
 		result[cj.Name] = GenerateCronJobManifest(cj)

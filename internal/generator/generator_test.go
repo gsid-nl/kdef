@@ -48,7 +48,7 @@ func fullDeployment() types.DeploymentConfig {
 
 func TestGenerateDeploymentV2(t *testing.T) {
 	dep := fullDeployment()
-	manifests := GenerateDeploymentV2(dep)
+	manifests := GenerateDeploymentV2(dep, nil)
 
 	if len(manifests) < 3 {
 		t.Fatalf("expected at least 3 manifests (deployment+service+ingress), got %d", len(manifests))
@@ -99,7 +99,7 @@ func TestGenerateDeploymentV2_MultipleIngresses(t *testing.T) {
 		},
 	}
 
-	manifests := GenerateDeploymentV2(dep)
+	manifests := GenerateDeploymentV2(dep, nil)
 
 	var ingressNames []string
 	for _, m := range manifests {
@@ -188,7 +188,7 @@ func TestGenerateDeploymentNoService(t *testing.T) {
 		},
 		// No Service block = no Service generated
 	}
-	manifests := GenerateDeploymentV2(dep)
+	manifests := GenerateDeploymentV2(dep, nil)
 
 	yamlBytes, err := RenderYAML(manifests)
 	if err != nil {
