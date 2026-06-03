@@ -25,4 +25,5 @@ type IngressDefaults struct {
 	TLS         *bool
 	TLSSecret   string
 	Issuer      string
+	Class       string // ingressClassName default for all ingress blocks
 }
