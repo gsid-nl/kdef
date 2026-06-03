@@ -21,9 +21,12 @@ type KdefConfig struct {
 
 // IngressDefaults defines shared settings inherited by all ingress blocks.
 type IngressDefaults struct {
-	Annotations map[string]string
-	TLS         *bool
-	TLSSecret   string
-	Issuer      string
-	Class       string // ingressClassName default for all ingress blocks
+	Annotations      map[string]string
+	TLS              *bool
+	TLSSecret        string
+	Issuer           string
+	Class            string // ingressClassName (classic Ingress mode)
+	Mode             string // "ingress" (default) or "gateway"
+	Gateway          string // Gateway resource name (gateway mode)
+	GatewayNamespace string // Gateway resource namespace (gateway mode, optional)
 }

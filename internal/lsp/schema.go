@@ -46,6 +46,7 @@ var topLevelBlocks = []BlockSchema{
 	clusterRoleSchema,
 	clusterRoleBindingSchema,
 	imagesSchema,
+	ingressDefaultsSchema,
 }
 
 var deploymentSchema = BlockSchema{
@@ -449,6 +450,21 @@ var servicePortSchema = BlockSchema{
 	Doc:    "Service port (labels: number, name)",
 	Attributes: []AttrSchema{
 		{Name: "target", Doc: "Target port number (defaults to port number)"},
+	},
+}
+
+var ingressDefaultsSchema = BlockSchema{
+	Type: "ingress_defaults",
+	Doc:  "Shared defaults inherited by all ingress blocks. Set once at root level.",
+	Attributes: []AttrSchema{
+		{Name: "mode", Doc: "Ingress mode: \"ingress\" (default, classic Ingress resource) or \"gateway\" (Gateway API HTTPRoute)"},
+		{Name: "class", Doc: "Ingress class name for classic mode (defaults to \"nginx\")"},
+		{Name: "gateway", Doc: "Gateway resource name for gateway mode"},
+		{Name: "gateway_namespace", Doc: "Namespace of the Gateway resource (gateway mode, optional)"},
+		{Name: "tls", Doc: "Enable TLS for all ingress blocks (bool)"},
+		{Name: "tls_secret", Doc: "Default TLS secret name"},
+		{Name: "issuer", Doc: "Default cert-manager issuer name"},
+		{Name: "annotations", Doc: "Default ingress annotations (map, supports nesting)"},
 	},
 }
 

@@ -40,7 +40,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 		},
 	}
 
-	manifests := GenerateStatefulSet(sts)
+	manifests := GenerateStatefulSet(sts, nil)
 	if len(manifests) != 2 {
 		t.Fatalf("expected 2 manifests (StatefulSet+Service), got %d", len(manifests))
 	}
