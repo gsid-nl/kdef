@@ -162,7 +162,7 @@
         {
           "comment": "Type keywords in variable declarations",
           "name": "storage.type.kdef",
-          "match": "\"(string|number|bool|enum\\[.*?\\])\""
+          "match": "\"(string|number|bool|list|any|enum\\[.*?\\])\""
         },
         {
           "comment": "Ternary operator",

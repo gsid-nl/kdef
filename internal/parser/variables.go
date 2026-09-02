@@ -323,8 +323,17 @@ func parseVariableBlock(block *hcl.Block) (types.VariableDecl, hcl.Diagnostics) 
 		defaultVal, moreDiags := attr.Expr.Value(nil)
 		diags = append(diags, moreDiags...)
 		if !moreDiags.HasErrors() {
-			varDecl.Default = &defaultVal
-			varDecl.Required = false
+			if typeStr == "list" && !defaultVal.CanIterateElements() {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Invalid default for list variable",
+					Detail:   fmt.Sprintf("Variable %q is declared as a list, but its default is %s.", varDecl.Name, defaultVal.Type().FriendlyName()),
+					Subject:  attr.Expr.Range().Ptr(),
+				})
+			} else {
+				varDecl.Default = &defaultVal
+				varDecl.Required = false
+			}
 		}
 	}
 
@@ -339,11 +348,16 @@ func resolveVarType(typeStr string) (cty.Type, []string, error) {
 		return cty.Number, nil, nil
 	case "bool":
 		return cty.Bool, nil, nil
+	case "list", "any":
+		// Structured values: a list of objects, a map, anything a values file
+		// could have carried. Shape is not checked, only that a `list` default
+		// is actually iterable.
+		return cty.DynamicPseudoType, nil, nil
 	default:
 		// Check for enum[...]
 		matches := enumPattern.FindStringSubmatch(typeStr)
 		if matches == nil {
-			return cty.NilType, nil, fmt.Errorf("unknown type %q (supported: string, number, bool, enum[...])", typeStr)
+			return cty.NilType, nil, fmt.Errorf("unknown type %q (supported: string, number, bool, list, any, enum[...])", typeStr)
 		}
 		// Parse allowed values from enum["a", "b", "c"]
 		raw := matches[1]
@@ -377,6 +391,16 @@ func BuildEvalContext(vars map[string]types.VariableDecl, overrides map[string]s
 	for name, v := range vars {
 		// Check overrides first
 		if override, ok := overrides[name]; ok {
+			// --set carries strings only, so it cannot express a structured
+			// value. Say so instead of silently replacing the list.
+			if v.Type == "list" || v.Type == "any" {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Cannot override structured variable with --set",
+					Detail:   fmt.Sprintf("Variable %q is declared as %q; --set only carries strings. Use --values with a JSON file, or change the default.", name, v.Type),
+				})
+				continue
+			}
 			varValues[name] = cty.StringVal(override)
 			continue
 		}
