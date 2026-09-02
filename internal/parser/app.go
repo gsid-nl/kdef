@@ -40,6 +40,7 @@ type FileResult struct {
 	StatefulSets           []types.StatefulSetConfig
 	CronJobs               []types.CronJobConfig
 	ConfigMaps             []types.ConfigMapConfig
+	Ingresses              []types.IngressConfig
 	Secrets                []types.SecretConfig
 	SealedSecrets          []types.SealedSecretConfig
 	PersistentVolumeClaims []types.PersistentVolumeClaimConfig
@@ -58,6 +59,7 @@ func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnos
 	for _, fr := range forResults {
 		result.CronJobs = append(result.CronJobs, fr.CronJobs...)
 		result.ConfigMaps = append(result.ConfigMaps, fr.ConfigMaps...)
+		result.Ingresses = append(result.Ingresses, fr.Ingresses...)
 		result.Deployments = append(result.Deployments, fr.Deployments...)
 		result.DaemonSets = append(result.DaemonSets, fr.DaemonSets...)
 		result.StatefulSets = append(result.StatefulSets, fr.StatefulSets...)
@@ -93,6 +95,7 @@ var topLevelSchema = &hcl.BodySchema{
 		{Type: "statefulset", LabelNames: []string{"name"}},
 		{Type: "cronjob", LabelNames: []string{"name"}},
 		{Type: "configmap", LabelNames: []string{"name"}},
+		{Type: "ingress", LabelNames: []string{"name"}},
 		{Type: "secret", LabelNames: []string{"name"}},
 		{Type: "sealedsecret", LabelNames: []string{"name"}},
 		{Type: "persistentvolumeclaim", LabelNames: []string{"name"}},
@@ -139,6 +142,12 @@ func parseBlocksFromBody(body hcl.Body, ctx *hcl.EvalContext, result *FileResult
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				result.ConfigMaps = append(result.ConfigMaps, cm)
+			}
+		case "ingress":
+			ing, moreDiags := parseStandaloneIngressBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.Ingresses = append(result.Ingresses, ing)
 			}
 		case "secret":
 			s, moreDiags := parseSecretBlock(block, ctx)
@@ -271,7 +280,19 @@ func parsePortBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.PortConfig, h
 	return port, diags
 }
 
+// parseIngressBlock parses an ingress block nested inside a workload.
 func parseIngressBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.IngressConfig, hcl.Diagnostics) {
+	return parseIngressBody(block, ctx, false)
+}
+
+// parseStandaloneIngressBlock parses a top-level `ingress "name" {}` block.
+// The block label is the Ingress resource name, and the block carries its own
+// namespace since there is no enclosing workload to inherit one from.
+func parseStandaloneIngressBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.IngressConfig, hcl.Diagnostics) {
+	return parseIngressBody(block, ctx, true)
+}
+
+func parseIngressBody(block *hcl.Block, ctx *hcl.EvalContext, standalone bool) (types.IngressConfig, hcl.Diagnostics) {
 	ingress := types.IngressConfig{}
 
 	schema := &hcl.BodySchema{
@@ -288,14 +309,57 @@ func parseIngressBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.IngressCon
 			{Name: "annotations"},
 		},
 	}
+	if standalone {
+		schema.Attributes = append(schema.Attributes, hcl.AttributeSchema{Name: "namespace"})
+	}
 
 	content, diags := block.Body.Content(schema)
 	if diags.HasErrors() {
 		return ingress, diags
 	}
 
-	// Ingress resource name (optional, defaults to app name)
-	if attr, ok := content.Attributes["name"]; ok {
+	if standalone {
+		// The label seeds the name; an explicit `name` wins, matching how
+		// deployment and friends behave. HCL forbids interpolation in block
+		// labels, so `name` is the only way to derive a name inside a `for`.
+		ingress.Name = block.Labels[0]
+		if attr, ok := content.Attributes["name"]; ok {
+			val, moreDiags := attr.Expr.Value(ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				ingress.Name = val.AsString()
+			}
+		}
+
+		if attr, ok := content.Attributes["namespace"]; ok {
+			val, moreDiags := attr.Expr.Value(ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				ingress.Namespace = val.AsString()
+			}
+		}
+
+		// A standalone ingress has no workload to borrow a backend from, so
+		// both halves of the backend reference must be spelled out. Without
+		// this the generator would silently emit a :80 backend.
+		if _, ok := content.Attributes["service_name"]; !ok {
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Missing required attribute",
+				Detail:   fmt.Sprintf("Top-level ingress %q must set `service_name`: there is no enclosing workload to default the backend service to.", ingress.Name),
+				Subject:  block.DefRange.Ptr(),
+			})
+		}
+		if _, ok := content.Attributes["port"]; !ok {
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Missing required attribute",
+				Detail:   fmt.Sprintf("Top-level ingress %q must set `port`: there is no enclosing workload to default the backend port to.", ingress.Name),
+				Subject:  block.DefRange.Ptr(),
+			})
+		}
+	} else if attr, ok := content.Attributes["name"]; ok {
+		// Ingress resource name (optional, defaults to app name)
 		val, moreDiags := attr.Expr.Value(ctx)
 		diags = append(diags, moreDiags...)
 		if !moreDiags.HasErrors() {

@@ -45,6 +45,7 @@ var topLevelBlocks = []BlockSchema{
 	pvcSchema,
 	clusterRoleSchema,
 	clusterRoleBindingSchema,
+	standaloneIngressSchema,
 	imagesSchema,
 	ingressDefaultsSchema,
 }
@@ -472,7 +473,8 @@ var ingressSchema = BlockSchema{
 	Type: "ingress",
 	Doc:  "Kubernetes Ingress. Repeatable per workload — each `ingress {}` block becomes its own Ingress resource (and Certificate when `tls = true` without `tls_secret`). Resource name defaults to the workload name on the first block and is auto-suffixed (-2, -3, ...) on later blocks.",
 	Attributes: []AttrSchema{
-		{Name: "name", Doc: "Ingress resource name (overrides the auto-derived name)"},
+		{Name: "name", Doc: "Ingress resource name (overrides the auto-derived name; nested blocks only)"},
+		{Name: "namespace", Doc: "Kubernetes namespace (top-level ingress blocks only)"},
 		{Name: "service_name", Doc: "Backend service name"},
 		{Name: "port", Doc: "Backend port number"},
 		{Name: "host", Doc: "Single hostname"},
@@ -483,6 +485,16 @@ var ingressSchema = BlockSchema{
 		{Name: "class", Doc: "Ingress class name (defaults to \"nginx\")"},
 		{Name: "annotations", Doc: "Ingress annotations (map, supports nesting)"},
 	},
+}
+
+// standaloneIngressSchema is the top-level form: `ingress "name" {}`. It shares
+// ingressSchema's attributes (only the completion snippet differs, since the
+// label names the resource), and requires an explicit backend.
+var standaloneIngressSchema = BlockSchema{
+	Type:       "ingress",
+	Labels:     1,
+	Doc:        "Standalone Kubernetes Ingress, not attached to a workload. The label is the resource name. `service_name` and `port` are required. Composes with `for` to generate one Ingress per entry in a values list.",
+	Attributes: ingressSchema.Attributes,
 }
 
 var autoscaleSchema = BlockSchema{

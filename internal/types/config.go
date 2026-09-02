@@ -8,6 +8,7 @@ type KdefConfig struct {
 	StatefulSets    []StatefulSetConfig
 	CronJobs        []CronJobConfig
 	ConfigMaps              []ConfigMapConfig
+	Ingresses               []IngressConfig // standalone top-level ingress blocks
 	Secrets                 []SecretConfig
 	SealedSecrets           []SealedSecretConfig
 	PersistentVolumeClaims  []PersistentVolumeClaimConfig

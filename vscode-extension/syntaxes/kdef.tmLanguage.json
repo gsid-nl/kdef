@@ -60,7 +60,7 @@
         },
         {
           "comment": "Block labels (quoted strings after block type)",
-          "match": "(?<=deployment|daemonset|statefulset|cronjob|configmap|secret|sealedsecret|persistentvolumeclaim|clusterrole|clusterrolebinding|container|init|volume|volume_claim|port|variable|for|override|service_account)\\s+(\"[^\"]*\")",
+          "match": "(?<=deployment|daemonset|statefulset|cronjob|configmap|ingress|secret|sealedsecret|persistentvolumeclaim|clusterrole|clusterrolebinding|container|init|volume|volume_claim|port|variable|for|override|service_account)\\s+(\"[^\"]*\")",
           "captures": {
             "1": { "name": "entity.name.type.kdef" }
           }

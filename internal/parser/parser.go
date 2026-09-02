@@ -102,6 +102,7 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		}
 		config.CronJobs = append(config.CronJobs, result.CronJobs...)
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
+		config.Ingresses = append(config.Ingresses, result.Ingresses...)
 		config.Deployments = append(config.Deployments, result.Deployments...)
 		config.DaemonSets = append(config.DaemonSets, result.DaemonSets...)
 		config.StatefulSets = append(config.StatefulSets, result.StatefulSets...)
@@ -182,6 +183,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	}
 	merged.CronJobs = append(merged.CronJobs, rootDefs.CronJobs...)
 	merged.ConfigMaps = append(merged.ConfigMaps, rootDefs.ConfigMaps...)
+	merged.Ingresses = append(merged.Ingresses, rootDefs.Ingresses...)
 	merged.Deployments = append(merged.Deployments, rootDefs.Deployments...)
 	merged.DaemonSets = append(merged.DaemonSets, rootDefs.DaemonSets...)
 	merged.StatefulSets = append(merged.StatefulSets, rootDefs.StatefulSets...)
@@ -247,6 +249,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 		merged.StatefulSets = append(merged.StatefulSets, config.StatefulSets...)
 		merged.CronJobs = append(merged.CronJobs, config.CronJobs...)
 		merged.ConfigMaps = append(merged.ConfigMaps, config.ConfigMaps...)
+		merged.Ingresses = append(merged.Ingresses, config.Ingresses...)
 		merged.Secrets = append(merged.Secrets, config.Secrets...)
 		merged.SealedSecrets = append(merged.SealedSecrets, config.SealedSecrets...)
 		merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, config.PersistentVolumeClaims...)
@@ -300,6 +303,11 @@ func injectNamespace(config *types.KdefConfig, namespace string) {
 	for i := range config.ConfigMaps {
 		if config.ConfigMaps[i].Namespace == "" {
 			config.ConfigMaps[i].Namespace = namespace
+		}
+	}
+	for i := range config.Ingresses {
+		if config.Ingresses[i].Namespace == "" {
+			config.Ingresses[i].Namespace = namespace
 		}
 	}
 	for i := range config.Secrets {
@@ -404,6 +412,11 @@ func validateNamespaces(config *types.KdefConfig, root *types.RootConfig) error 
 			return err
 		}
 	}
+	for _, ing := range config.Ingresses {
+		if err := check("ingress", ing.Name, ing.Namespace); err != nil {
+			return err
+		}
+	}
 	for _, s := range config.Secrets {
 		if err := check("secret", s.Name, s.Namespace); err != nil {
 			return err
@@ -431,14 +444,30 @@ func validateNamespaces(config *types.KdefConfig, root *types.RootConfig) error 
 // Conflicts are returned as a fatal error. The check runs after ingress_defaults
 // have been applied so that defaulted fields (TLS, TLSSecret) are accounted for.
 func validateIngresses(config *types.KdefConfig) error {
-	type origin struct {
-		kind     string
-		workload string
-		index    int
-	}
+	resourceNames := make(map[string]string) // key: "namespace/name" -> origin description
+	secretNames := make(map[string]string)   // key: "namespace/secret" -> origin description
 
-	resourceNames := make(map[string]origin) // key: "namespace/name"
-	secretNames := make(map[string]origin)   // key: "namespace/secret"
+	// record checks one ingress against everything seen so far. desc describes
+	// where the block came from, and is reused verbatim when a later block
+	// collides with this one.
+	record := func(ing types.IngressConfig, name, namespace, desc string) error {
+		key := namespace + "/" + name
+		if prev, dup := resourceNames[key]; dup {
+			return fmt.Errorf("%s resolves to resource name %q which is already used by %s in namespace %q",
+				desc, name, prev, namespace)
+		}
+		resourceNames[key] = desc
+
+		if secret := ing.CertificateSecretName(); secret != "" {
+			skey := namespace + "/" + secret
+			if prev, dup := secretNames[skey]; dup {
+				return fmt.Errorf("%s would generate cert-manager Certificate secret %q which is already requested by %s in namespace %q — set `tls_secret` on one of them, or change the first host so the derived secret names differ",
+					desc, secret, prev, namespace)
+			}
+			secretNames[skey] = desc
+		}
+		return nil
+	}
 
 	check := func(kind, workload, namespace string, ingresses []types.IngressConfig) error {
 		// Detect duplicates *within* the workload too: e.g. two blocks both
@@ -452,20 +481,9 @@ func validateIngresses(config *types.KdefConfig) error {
 			}
 			localNames[name] = i
 
-			key := namespace + "/" + name
-			if prev, dup := resourceNames[key]; dup {
-				return fmt.Errorf("%s %q: ingress #%d resolves to resource name %q which is already used by %s %q (ingress #%d) in namespace %q",
-					kind, workload, i+1, name, prev.kind, prev.workload, prev.index+1, namespace)
-			}
-			resourceNames[key] = origin{kind: kind, workload: workload, index: i}
-
-			if secret := ing.CertificateSecretName(); secret != "" {
-				skey := namespace + "/" + secret
-				if prev, dup := secretNames[skey]; dup {
-					return fmt.Errorf("%s %q: ingress #%d would generate cert-manager Certificate secret %q which is already requested by %s %q (ingress #%d) in namespace %q — set `tls_secret` on one of them, or change the first host so the derived secret names differ",
-						kind, workload, i+1, secret, prev.kind, prev.workload, prev.index+1, namespace)
-				}
-				secretNames[skey] = origin{kind: kind, workload: workload, index: i}
+			desc := fmt.Sprintf("%s %q ingress #%d", kind, workload, i+1)
+			if err := record(ing, name, namespace, desc); err != nil {
+				return err
 			}
 		}
 		return nil
@@ -478,6 +496,12 @@ func validateIngresses(config *types.KdefConfig) error {
 	}
 	for _, sts := range config.StatefulSets {
 		if err := check("statefulset", sts.Name, sts.Namespace, sts.Ingresses); err != nil {
+			return err
+		}
+	}
+	for _, ing := range config.Ingresses {
+		desc := fmt.Sprintf("top-level ingress %q", ing.Name)
+		if err := record(ing, ing.Name, ing.Namespace, desc); err != nil {
 			return err
 		}
 	}
@@ -943,6 +967,7 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 		}
 		config.CronJobs = append(config.CronJobs, result.CronJobs...)
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
+		config.Ingresses = append(config.Ingresses, result.Ingresses...)
 		config.Deployments = append(config.Deployments, result.Deployments...)
 		config.DaemonSets = append(config.DaemonSets, result.DaemonSets...)
 		config.StatefulSets = append(config.StatefulSets, result.StatefulSets...)
@@ -997,5 +1022,8 @@ func applyIngressDefaults(config *types.KdefConfig) {
 		for j := range config.StatefulSets[i].Ingresses {
 			apply(&config.StatefulSets[i].Ingresses[j])
 		}
+	}
+	for i := range config.Ingresses {
+		apply(&config.Ingresses[i])
 	}
 }

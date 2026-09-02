@@ -64,6 +64,7 @@ func expandForBlocks(body hcl.Body, ctx *hcl.EvalContext) (hcl.Body, []FileResul
 				{Type: "statefulset", LabelNames: []string{"name"}},
 				{Type: "cronjob", LabelNames: []string{"name"}},
 				{Type: "configmap", LabelNames: []string{"name"}},
+				{Type: "ingress", LabelNames: []string{"name"}},
 			},
 		}
 
