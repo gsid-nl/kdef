@@ -32,7 +32,32 @@ variable "environment" {
   type    = "enum[staging, production]"
   default = "staging"
 }
+
+# Structured values: lists of objects, maps, anything a --values file could carry.
+variable "sites" {
+  type = "list"
+
+  default = [
+    { name = "cor-it-nl", hosts = ["cor-it.nl", "www.cor-it.nl"] },
+    { name = "gsid-nl", hosts = ["gsid.nl", "www.gsid.nl"] },
+  ]
+}
 ```
+
+### Types
+
+| Type | Notes |
+| --- | --- |
+| `string` | |
+| `number` | |
+| `bool` | |
+| `enum[a, b, c]` | A string restricted to the listed values |
+| `list` | A list of anything — objects, strings, nested lists. The shape is not checked, only that the default is iterable. |
+| `any` | Same as `list` without the iterable check: maps, objects, scalars. |
+
+A `list` or `any` variable is the in-repo alternative to a `--values` JSON file, and reads the same way at the point of use — `for "site" "var.sites"` does not care which one supplied the value. Declare it in `vars.kdef` when the data belongs to the repo; use `--values` when it is generated elsewhere.
+
+`--set` carries strings only, so it cannot override a `list` or `any` variable; kdef errors rather than quietly replacing the value with a string. Use `--values` for that.
 
 Imported files can contain variables and `ingress_defaults`. Files are processed in order; later imports override earlier ones. `vars.kdef` itself always takes final precedence.
 

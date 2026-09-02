@@ -3,6 +3,7 @@ package parser
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -111,6 +112,98 @@ variable "api_key" {
 	apiKey := vars["api_key"]
 	if !apiKey.Required {
 		t.Error("api_key should be required (no default)")
+	}
+}
+
+func TestParseVariableListType(t *testing.T) {
+	src := `
+variable "sites" {
+  type = "list"
+
+  default = [
+    { name = "cor-it-nl", hosts = ["cor-it.nl", "www.cor-it.nl"] },
+    { name = "gsid-nl", hosts = ["gsid.nl"] },
+  ]
+}
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "vars.kdef")
+	if err := os.WriteFile(path, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	vars, diags := ParseVariableFile(path)
+	if diags.HasErrors() {
+		t.Fatalf("unexpected errors: %s", diags.Error())
+	}
+
+	sites := vars["sites"]
+	if sites.Required {
+		t.Error("sites has a default, so it should not be required")
+	}
+	if sites.Default == nil || !sites.Default.CanIterateElements() {
+		t.Fatal("default should be an iterable value")
+	}
+	if got := sites.Default.LengthInt(); got != 2 {
+		t.Errorf("expected 2 entries, got %d", got)
+	}
+
+	// The value must survive into var.* so `for "site" "var.sites"` resolves.
+	ctx, diags := BuildEvalContext(vars, nil, nil, nil)
+	if diags.HasErrors() {
+		t.Fatalf("unexpected errors: %s", diags.Error())
+	}
+	val, err := resolveReference("var.sites", ctx)
+	if err != nil {
+		t.Fatalf("resolve var.sites: %v", err)
+	}
+	if val.LengthInt() != 2 {
+		t.Errorf("expected 2 entries via var.sites, got %d", val.LengthInt())
+	}
+}
+
+func TestParseVariableListType_RejectsScalarDefault(t *testing.T) {
+	src := `
+variable "sites" {
+  type    = "list"
+  default = "not-a-list"
+}
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "vars.kdef")
+	if err := os.WriteFile(path, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, diags := ParseVariableFile(path); !diags.HasErrors() {
+		t.Fatal("expected an error for a scalar default on a list variable")
+	}
+}
+
+func TestBuildEvalContext_StructuredVarRejectsSet(t *testing.T) {
+	src := `
+variable "sites" {
+  type    = "list"
+  default = [{ name = "a" }]
+}
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "vars.kdef")
+	if err := os.WriteFile(path, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	vars, diags := ParseVariableFile(path)
+	if diags.HasErrors() {
+		t.Fatalf("unexpected errors: %s", diags.Error())
+	}
+
+	_, diags = BuildEvalContext(vars, map[string]string{"sites": "x"}, nil, nil)
+	if !diags.HasErrors() {
+		t.Fatal("expected an error when --set targets a list variable")
+	}
+	if !strings.Contains(diags.Error(), "--set") {
+		t.Errorf("error should mention --set, got: %s", diags.Error())
 	}
 }
 
