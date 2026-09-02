@@ -394,6 +394,18 @@
       "}"
     ]
   },
+  "Standalone Ingress": {
+    "prefix": "ingress-standalone",
+    "description": "Add a top-level ingress block (not attached to a workload)",
+    "body": [
+      "ingress \"${1:name}\" {",
+      "  service_name = \"${2:app-svc}\"",
+      "  port         = ${3:80}",
+      "  hosts        = [\"${4:app.example.com}\"]",
+      "  tls          = true",
+      "}"
+    ]
+  },
   "Ingress with Annotations": {
     "prefix": "ingress-annotations",
     "description": "Add an ingress block with nginx annotations",

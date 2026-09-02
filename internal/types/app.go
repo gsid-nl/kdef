@@ -56,6 +56,7 @@ type PortConfig struct {
 
 type IngressConfig struct {
 	Name        string            // K8s resource name (defaults to app name)
+	Namespace   string            // only set on top-level ingress blocks; nested blocks inherit the workload namespace
 	ServiceName string            // backend service name (defaults to app name)
 	Port        int32             // backend port number (defaults to first app port)
 	Host        string            // single host (shorthand)

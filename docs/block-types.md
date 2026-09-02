@@ -25,6 +25,7 @@ service_account "default" {
 ingress_defaults {
   tls    = true
   issuer = "letsencrypt-production"
+  class  = "nginx"                     # default ingressClassName for every ingress block
   annotations = {
     "nginx.ingress.kubernetes.io" = {
       "force-ssl-redirect" = "true"
@@ -99,6 +100,41 @@ kdef validate --dir repo            # validates all apps
 kdef diff --dir repo --env staging  # diffs all apps against cluster
 kdef apply --dir repo --env prod    # applies all apps
 ```
+
+### `ingress_defaults` — shared ingress settings
+
+`ingress_defaults` is a root-level block (valid in `root.kdef`, `vars.kdef`, or an imported file). Every `ingress {}` block inherits its values; anything set on the ingress block itself wins.
+
+| Attribute | Description |
+| --- | --- |
+| `mode` | `"ingress"` (default) or `"gateway"` — see below |
+| `class` | Default `ingressClassName` (classic mode, defaults to `nginx`) |
+| `gateway` | Gateway resource name (gateway mode) |
+| `gateway_namespace` | Namespace of the Gateway resource (gateway mode, optional) |
+| `tls` | Enable TLS on all ingress blocks |
+| `tls_secret` | Default TLS secret name |
+| `issuer` | Default cert-manager issuer |
+| `annotations` | Default annotations, merged with per-ingress annotations (supports nesting) |
+
+#### Ingress modes
+
+With the default `mode = "ingress"`, each `ingress {}` block renders a classic `networking.k8s.io/v1` Ingress.
+
+With `mode = "gateway"`, the same `ingress {}` blocks render Gateway API `HTTPRoute` resources (`gateway.networking.k8s.io/v1`) attached to the Gateway named by `gateway`. Hosts become `hostnames`, the backend service and port become the rule's `backendRef`, and annotations are copied onto the HTTPRoute. Certificates are still generated from `tls`/`issuer` as usual.
+
+```hcl
+# root.kdef
+
+ingress_defaults {
+  mode              = "gateway"
+  gateway           = "public-gateway"
+  gateway_namespace = "gateway-system"
+  tls               = true
+  issuer            = "letsencrypt-production"
+}
+```
+
+The mode is repo-wide: switching it re-renders every ingress in the tree, so no `.kdef` app files need to change.
 
 ---
 
@@ -283,7 +319,9 @@ deployment "web" {
   #
   # A deployment may have one or more `ingress {}` blocks. Each block produces
   # one Kubernetes Ingress resource (and, when `tls = true` without an explicit
-  # `tls_secret`, one cert-manager Certificate).
+  # `tls_secret`, one cert-manager Certificate). With
+  # `ingress_defaults { mode = "gateway" }` the same blocks produce Gateway API
+  # HTTPRoutes instead — see "Ingress modes" above.
   #
   # Resource naming rules:
   #   - First block, no `name`  →  uses the deployment name (e.g. "web")
@@ -301,6 +339,7 @@ deployment "web" {
     service_name = "web-svc"            # backend service
     port         = 80                   # backend port
     host         = "web.example.com"
+    class        = "nginx"              # ingressClassName (defaults to "nginx")
     tls          = true
     tls_secret   = "web-tls"            # existing TLS secret
     # Or use cert-manager:
@@ -563,6 +602,35 @@ configmap "nginx-config" {
   }
 }
 ```
+
+## `ingress` — Standalone Ingress
+
+An `ingress` block can also stand on its own at the top level, outside any workload. This is the same block as the nested `ingress {}` inside a deployment, with two differences: it takes a label, and it carries its own namespace.
+
+Use it when ingresses outnumber workloads, or when the list of hosts is data rather than something hand-written: many domains pointing at a single service, a tenant list generated from a database and committed as a values file. An Ingress only names a Service in Kubernetes, so nothing about it requires a workload block to sit in.
+
+```hcl
+ingress "cms-gsid-nl" {
+  namespace    = "cms"                # optional; injected from root.kdef when omitted
+  service_name = "cms-public-svc"     # required
+  port         = 80                   # required
+  hosts        = ["gsid.nl", "www.gsid.nl"]
+  tls          = true
+}
+```
+
+Rules specific to the standalone form:
+
+- **The label is the resource name.** An explicit `name = "..."` wins over the label, which is how you derive a name inside a `for` loop: HCL does not allow interpolation in block labels.
+- **`service_name` and `port` are required.** A nested block borrows both from its workload; a standalone block has nothing to borrow from, so kdef errors at parse time rather than silently emitting a `:80` backend.
+- **`namespace` follows the usual injection rules.** Set it on the block, or let the `namespace` from the block's `root.kdef` entry fill it in.
+- Everything else — `tls`, `tls_secret`, `issuer`, `class`, `annotations`, `host`/`hosts` — behaves exactly as in the nested form, `ingress_defaults` included.
+- The `app.kubernetes.io/name` label on the generated Ingress and Certificate is set to `service_name`, so a standalone ingress still groups with the workload it fronts.
+- Collision detection is shared with nested blocks: two ingresses that resolve to the same resource name, or that would derive the same cert-manager Certificate secret name, are rejected within a namespace regardless of which form they were written in.
+
+Combined with `for`, this is how a generated domain list becomes ingresses — see [conditionals-and-loops.md](conditionals-and-loops.md).
+
+`kdef import` still emits nested `ingress {}` blocks under the workload owning the matching Service; it does not produce standalone blocks.
 
 ## `secret` — Kubernetes Secret
 
