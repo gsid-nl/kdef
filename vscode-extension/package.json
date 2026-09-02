@@ -2,7 +2,7 @@
   "name": "kdef",
   "displayName": "kdef - Kubernetes Declarative Configuration",
   "description": "Syntax highlighting, snippets, and language support for .kdef files",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "publisher": "gsid",
   "author": {
     "name": "Guido Smit",
