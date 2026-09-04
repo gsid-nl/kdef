@@ -232,19 +232,32 @@ func (s *Server) completeVariables(uri string) []protocol.CompletionItem {
 	dir := filepath.Dir(filename)
 
 	allVars := make(map[string]string) // name -> doc
+	seen := make(map[string]bool)      // guards against import cycles
 
-	loadVarsFrom := func(varsFile string) {
-		varsURI := pathToURI(varsFile)
-		if doc := s.documents.Get(varsURI); doc != nil {
-			parsed, diags := parser.ParseVariableFileFromBytes([]byte(doc.Content), varsFile)
-			if !diags.HasErrors() {
-				for name, v := range parsed {
+	// A vars file can pull in others (`import = ["vars/sites.kdef"]`), and
+	// those declarations are just as completable as the ones written inline.
+	var loadVarsFrom func(varsFile string)
+	loadVarsFrom = func(varsFile string) {
+		if seen[varsFile] {
+			return
+		}
+		seen[varsFile] = true
+
+		// Imports first, so the importing file's own declarations win.
+		if _, err := os.Stat(varsFile); err == nil {
+			if result, diags := parser.ParseVariableFileWithImports(varsFile); !diags.HasErrors() {
+				for _, imported := range result.Imports {
+					loadVarsFrom(imported)
+				}
+				for name, v := range result.Variables {
 					allVars[name] = varDoc(v)
 				}
 			}
-		} else if _, err := os.Stat(varsFile); err == nil {
-			parsed, diags := parser.ParseVariableFile(varsFile)
-			if !diags.HasErrors() {
+		}
+
+		// An open buffer is newer than whatever is on disk.
+		if doc := s.documents.Get(pathToURI(varsFile)); doc != nil {
+			if parsed, diags := parser.ParseVariableFileFromBytes([]byte(doc.Content), varsFile); !diags.HasErrors() {
 				for name, v := range parsed {
 					allVars[name] = varDoc(v)
 				}

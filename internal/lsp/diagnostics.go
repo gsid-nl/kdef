@@ -22,7 +22,7 @@ func (s *Server) diagnoseFile(uri string, content string) []protocol.Diagnostic 
 	var diags hcl.Diagnostics
 
 	switch {
-	case basename == "vars.kdef":
+	case basename == "vars.kdef" || isVariableFile([]byte(content), filename):
 		_, diags = parser.ParseVariableFileFromBytes([]byte(content), filename)
 	case basename == "root.kdef":
 		// Root files have a different schema; just do syntax validation
@@ -32,6 +32,24 @@ func (s *Server) diagnoseFile(uri string, content string) []protocol.Diagnostic 
 	}
 
 	return hclDiagsToLSP(diags)
+}
+
+// isVariableFile reports whether a file should be checked against the variable
+// schema rather than the definition schema. A file imported by vars.kdef can be
+// named anything (vars/sites.kdef, defaults.kdef, images.kdef), so the name is
+// not enough — sniff for a top-level `variable` block instead.
+func isVariableFile(src []byte, filename string) bool {
+	p := hclparse.NewParser()
+	file, diags := p.ParseHCL(src, filename)
+	if diags.HasErrors() || file == nil {
+		return false
+	}
+	content, _, _ := file.Body.PartialContent(&hcl.BodySchema{
+		Blocks: []hcl.BlockHeaderSchema{
+			{Type: "variable", LabelNames: []string{"name"}},
+		},
+	})
+	return content != nil && len(content.Blocks) > 0
 }
 
 // diagnoseDefinitionFile parses a definition file (.kdef) with a best-effort eval context.
