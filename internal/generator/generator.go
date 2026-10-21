@@ -73,6 +73,9 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 	for _, crb := range config.ClusterRoleBindings {
 		result["clusterrolebinding-"+crb.Name] = []Manifest{{Object: GenerateClusterRoleBinding(crb)}}
 	}
+	for _, crd := range config.CRDs {
+		result["crd-"+crd.Name] = []Manifest{{Object: GenerateCRD(crd)}}
+	}
 	return result
 }
 

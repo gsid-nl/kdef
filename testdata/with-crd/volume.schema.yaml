@@ -1,0 +1,19 @@
+type: object
+properties:
+  spec:
+    type: object
+    required: [replicas]
+    properties:
+      replicas:
+        type: array
+        items:
+          type: object
+          properties:
+            node:
+              type: string
+            state:
+              type: string
+              enum: [writable, sealed, draining]
+  status:
+    type: object
+    x-kubernetes-preserve-unknown-fields: true

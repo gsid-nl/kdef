@@ -16,6 +16,7 @@ type KdefConfig struct {
 	ServiceAccounts         []ServiceAccountConfig
 	ClusterRoles            []ClusterRoleConfig
 	ClusterRoleBindings     []ClusterRoleBindingConfig
+	CRDs                    []CRDConfig
 	IngressDefaults         *IngressDefaults
 	Warnings                []string // non-fatal validation warnings
 }

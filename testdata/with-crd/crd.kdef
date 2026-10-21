@@ -1,0 +1,21 @@
+crd "volumes.storage.example.com" {
+  kind        = "Volume"
+  scope       = "Cluster"
+  short_names = ["wfv"]
+  categories  = ["storage"]
+
+  version "v1alpha1" {
+    schema             = file("volume.schema.yaml")
+    status_subresource = true
+
+    column "Nodes" {
+      type      = "string"
+      json_path = ".spec.replicas[*].node"
+    }
+
+    column "Age" {
+      type      = "date"
+      json_path = ".metadata.creationTimestamp"
+    }
+  }
+}

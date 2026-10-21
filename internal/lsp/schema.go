@@ -45,6 +45,7 @@ var topLevelBlocks = []BlockSchema{
 	pvcSchema,
 	clusterRoleSchema,
 	clusterRoleBindingSchema,
+	crdSchema,
 	standaloneIngressSchema,
 	imagesSchema,
 	ingressDefaultsSchema,
@@ -180,6 +181,51 @@ var clusterRoleBindingSchema = BlockSchema{
 	SubBlocks: []BlockSchema{
 		roleRefSchema,
 		subjectSchema,
+	},
+}
+
+var crdSchema = BlockSchema{
+	Type:   "crd",
+	Labels: 1,
+	Doc:    "Kubernetes CustomResourceDefinition, named \"<plural>.<group>\"",
+	Attributes: []AttrSchema{
+		{Name: "kind", Doc: "Kind of the custom resource (e.g. \"Volume\")", Required: true},
+		{Name: "scope", Doc: `"Namespaced" (default) or "Cluster"`},
+		{Name: "singular", Doc: "Singular name (default: lowercase kind)"},
+		{Name: "list_kind", Doc: "List kind (default: kind + \"List\")"},
+		{Name: "short_names", Doc: "Short names for kubectl (list)"},
+		{Name: "categories", Doc: "Categories for kubectl get <category> (list)"},
+	},
+	SubBlocks: []BlockSchema{
+		crdVersionSchema,
+	},
+}
+
+var crdVersionSchema = BlockSchema{
+	Type:   "version",
+	Labels: 1,
+	Doc:    "CRD version (e.g. \"v1alpha1\")",
+	Attributes: []AttrSchema{
+		{Name: "served", Doc: "Serve this version (default true)"},
+		{Name: "storage", Doc: "Storage version (default true when it is the only version)"},
+		{Name: "schema", Doc: "OpenAPI v3 schema: YAML/JSON text (file(\"x.yaml\")) or an HCL object; default accepts any fields"},
+		{Name: "status_subresource", Doc: "Enable the /status subresource"},
+	},
+	SubBlocks: []BlockSchema{
+		crdColumnSchema,
+	},
+}
+
+var crdColumnSchema = BlockSchema{
+	Type:   "column",
+	Labels: 1,
+	Doc:    "Additional printer column for kubectl get",
+	Attributes: []AttrSchema{
+		{Name: "type", Doc: `"integer", "number", "string", "boolean" or "date"`, Required: true},
+		{Name: "json_path", Doc: "JSONPath into the resource (e.g. \".spec.node\")", Required: true},
+		{Name: "description", Doc: "Column description"},
+		{Name: "format", Doc: "OpenAPI format (e.g. \"date-time\")"},
+		{Name: "priority", Doc: "0 shows by default, higher only with -o wide"},
 	},
 }
 
@@ -603,6 +649,9 @@ func init() {
 	registerBlock(&tolerationSchema)
 	registerBlock(&clusterRoleSchema)
 	registerBlock(&clusterRoleBindingSchema)
+	registerBlock(&crdSchema)
+	registerBlock(&crdVersionSchema)
+	registerBlock(&crdColumnSchema)
 	registerBlock(&policyRuleSchema)
 	registerBlock(&roleRefSchema)
 	registerBlock(&subjectSchema)

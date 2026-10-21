@@ -819,6 +819,47 @@ clusterrolebinding "promtail" {
 }
 ```
 
+## `crd`: Kubernetes CustomResourceDefinition
+
+Declares a custom resource type. The label is the CRD name, which Kubernetes requires to be `<plural>.<group>`; kdef takes the plural and the group from it.
+
+```hcl
+crd "volumes.storage.example.com" {
+  kind        = "Volume"
+  scope       = "Cluster"      # "Namespaced" (default) or "Cluster"
+  short_names = ["wfv"]
+  categories  = ["storage"]
+
+  version "v1alpha1" {
+    schema             = file("volume.schema.yaml")
+    status_subresource = true
+
+    column "Nodes" {
+      type      = "string"
+      json_path = ".spec.replicas[*].node"
+    }
+  }
+}
+```
+
+| Attribute | Default | |
+|---|---|---|
+| `kind` | required | Kind of the custom resource |
+| `scope` | `"Namespaced"` | or `"Cluster"` |
+| `singular` | lowercase `kind` | |
+| `list_kind` | `kind` + `"List"` | |
+| `short_names`, `categories` | none | lists |
+
+Each `version "<name>"` block:
+
+- `served`: default `true`.
+- `storage`: default `true` when it is the only version. With several versions exactly one must set it.
+- `schema`: the `openAPIV3Schema`, either as YAML or JSON text (usually `file("x.yaml")` or a heredoc) or as an HCL object. It is passed through unchanged. Without it the version accepts any fields (`type: object` with `x-kubernetes-preserve-unknown-fields: true`).
+- `status_subresource`: adds `subresources.status`, so the status can only be written through `/status`.
+- `column "<name>" {}`: an extra `kubectl get` column with `type` (`integer`, `number`, `string`, `boolean`, `date`) and `json_path`, both required, plus optional `description`, `format` and `priority`.
+
+A CRD is cluster-scoped: it gets no namespace, and it renders before every other resource so the custom resources that use it can be applied in the same run.
+
 ## Pod scheduling: `toleration`, `node_selector`, host namespaces
 
 All workload block types (`deployment`, `daemonset`, `statefulset`, `cronjob`) accept:

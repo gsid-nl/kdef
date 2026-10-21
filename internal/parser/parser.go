@@ -111,6 +111,7 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
 		config.ClusterRoles = append(config.ClusterRoles, result.ClusterRoles...)
 		config.ClusterRoleBindings = append(config.ClusterRoleBindings, result.ClusterRoleBindings...)
+		config.CRDs = append(config.CRDs, result.CRDs...)
 	}
 
 	// Phase 3: apply ingress defaults to all apps
@@ -192,6 +193,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, rootDefs.PersistentVolumeClaims...)
 	merged.ClusterRoles = append(merged.ClusterRoles, rootDefs.ClusterRoles...)
 	merged.ClusterRoleBindings = append(merged.ClusterRoleBindings, rootDefs.ClusterRoleBindings...)
+	merged.CRDs = append(merged.CRDs, rootDefs.CRDs...)
 
 	for name, entry := range root.Deployments {
 		subDir := filepath.Join(filepath.Dir(rootFile), entry.Path)
@@ -255,6 +257,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 		merged.PersistentVolumeClaims = append(merged.PersistentVolumeClaims, config.PersistentVolumeClaims...)
 		merged.ClusterRoles = append(merged.ClusterRoles, config.ClusterRoles...)
 		merged.ClusterRoleBindings = append(merged.ClusterRoleBindings, config.ClusterRoleBindings...)
+		merged.CRDs = append(merged.CRDs, config.CRDs...)
 	}
 
 	// Validate: every resource must have a namespace
@@ -976,6 +979,7 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 		config.PersistentVolumeClaims = append(config.PersistentVolumeClaims, result.PersistentVolumeClaims...)
 		config.ClusterRoles = append(config.ClusterRoles, result.ClusterRoles...)
 		config.ClusterRoleBindings = append(config.ClusterRoleBindings, result.ClusterRoleBindings...)
+		config.CRDs = append(config.CRDs, result.CRDs...)
 	}
 
 	return config, nil

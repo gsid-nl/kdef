@@ -97,7 +97,12 @@ func cleanYAML(data []byte) []byte {
 		}
 	}
 
-	// Second pass: regex cleanup for remaining empty-value fields.
+	// Second pass: regex cleanup for remaining empty-value fields. CRDs are
+	// left alone: an empty object there is meaningful (subresources.status: {},
+	// properties: {} in a schema).
+	if obj["kind"] == "CustomResourceDefinition" {
+		return data
+	}
 	for _, p := range emptyFieldPatterns {
 		data = p.ReplaceAll(data, nil)
 	}

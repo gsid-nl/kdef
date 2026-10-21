@@ -22,6 +22,7 @@ Syntax highlighting, snippets, and language support for [kdef](https://github.co
 | `statefulset` | StatefulSet with per-pod storage |
 | `clusterrole` | Cluster-scoped RBAC role |
 | `clusterrolebinding` | Bind a ClusterRole to a subject |
+| `crd` | CustomResourceDefinition |
 | `toleration` | Tolerate a node taint |
 | `field_ref` | Downward API env reference |
 | `container` | Container block |

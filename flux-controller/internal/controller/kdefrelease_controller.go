@@ -374,7 +374,7 @@ func parseYAMLObjects(yamlBytes []byte) ([]*unstructured.Unstructured, error) {
 // Lower values are applied first (e.g. Namespace before Deployment).
 func applyOrder(kind string) int {
 	switch kind {
-	case "Namespace":
+	case "Namespace", "CustomResourceDefinition":
 		return 0
 	case "ConfigMap", "Secret", "SealedSecret":
 		return 1

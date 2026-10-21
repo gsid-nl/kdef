@@ -46,6 +46,7 @@ type FileResult struct {
 	PersistentVolumeClaims []types.PersistentVolumeClaimConfig
 	ClusterRoles           []types.ClusterRoleConfig
 	ClusterRoleBindings    []types.ClusterRoleBindingConfig
+	CRDs                   []types.CRDConfig
 }
 
 func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnostics) {
@@ -68,6 +69,7 @@ func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnos
 		result.PersistentVolumeClaims = append(result.PersistentVolumeClaims, fr.PersistentVolumeClaims...)
 		result.ClusterRoles = append(result.ClusterRoles, fr.ClusterRoles...)
 		result.ClusterRoleBindings = append(result.ClusterRoleBindings, fr.ClusterRoleBindings...)
+		result.CRDs = append(result.CRDs, fr.CRDs...)
 	}
 
 	// Pre-processing: extract and evaluate "if" blocks
@@ -101,6 +103,7 @@ var topLevelSchema = &hcl.BodySchema{
 		{Type: "persistentvolumeclaim", LabelNames: []string{"name"}},
 		{Type: "clusterrole", LabelNames: []string{"name"}},
 		{Type: "clusterrolebinding", LabelNames: []string{"name"}},
+		{Type: "crd", LabelNames: []string{"name"}},
 		{Type: "images"},
 	},
 }
@@ -178,6 +181,12 @@ func parseBlocksFromBody(body hcl.Body, ctx *hcl.EvalContext, result *FileResult
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				result.ClusterRoleBindings = append(result.ClusterRoleBindings, crb)
+			}
+		case "crd":
+			crd, moreDiags := parseCRDBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.CRDs = append(result.CRDs, crd)
 			}
 		}
 	}

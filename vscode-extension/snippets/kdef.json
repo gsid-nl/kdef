@@ -178,6 +178,21 @@
       "}"
     ]
   },
+  "CRD": {
+    "prefix": "crd",
+    "description": "CustomResourceDefinition with one version",
+    "body": [
+      "crd \"${1:plural}.${2:example.com}\" {",
+      "  kind  = \"${3:Kind}\"",
+      "  scope = \"${4|Namespaced,Cluster|}\"",
+      "",
+      "  version \"${5:v1alpha1}\" {",
+      "    schema             = file(\"${6:schema.yaml}\")",
+      "    status_subresource = true",
+      "  }",
+      "}"
+    ]
+  },
   "Field Ref": {
     "prefix": "field_ref",
     "description": "Downward API env reference",
