@@ -1,4 +1,4 @@
-VERSION ?= 0.7.4
+VERSION ?= 0.7.5
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "nogit")
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -s -w \
