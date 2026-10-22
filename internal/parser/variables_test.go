@@ -271,3 +271,59 @@ variable "api_key" {
 		t.Error("expected error for missing required variable")
 	}
 }
+
+func TestBuildEvalContextTypedOverrides(t *testing.T) {
+	src := `
+variable "replicas" {
+  type    = "number"
+  default = 1
+}
+
+variable "debug" {
+  type    = "bool"
+  default = false
+}
+
+variable "environment" {
+  type    = "enum[staging, production]"
+  default = "staging"
+}
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "vars.kdef")
+	if err := os.WriteFile(path, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	vars, diags := ParseVariableFile(path)
+	if diags.HasErrors() {
+		t.Fatalf("parse errors: %s", diags.Error())
+	}
+
+	overrides := map[string]string{"replicas": "3", "debug": "true", "environment": "production"}
+	ctx, diags := BuildEvalContext(vars, overrides, nil, nil)
+	if diags.HasErrors() {
+		t.Fatalf("context errors: %s", diags.Error())
+	}
+	varObj := ctx.Variables["var"]
+	if n, _ := varObj.GetAttr("replicas").AsBigFloat().Int64(); n != 3 {
+		t.Errorf("replicas = %d, want 3", n)
+	}
+	if !varObj.GetAttr("debug").True() {
+		t.Error("debug should be true")
+	}
+	if got := varObj.GetAttr("environment").AsString(); got != "production" {
+		t.Errorf("environment = %q, want production", got)
+	}
+
+	for name, value := range map[string]string{"replicas": "three", "debug": "yes", "environment": "prodction"} {
+		_, diags := BuildEvalContext(vars, map[string]string{name: value}, nil, nil)
+		if !diags.HasErrors() {
+			t.Errorf("--set %s=%s: expected an error", name, value)
+			continue
+		}
+		if !strings.Contains(diags.Error(), value) {
+			t.Errorf("--set %s=%s: error should quote the value, got: %s", name, value, diags.Error())
+		}
+	}
+}

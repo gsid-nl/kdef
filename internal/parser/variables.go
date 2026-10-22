@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/convert"
 	"github.com/zclconf/go-cty/cty/function"
 
 	"github.com/gsid-nl/kdef/internal/types"
@@ -401,7 +403,12 @@ func BuildEvalContext(vars map[string]types.VariableDecl, overrides map[string]s
 				})
 				continue
 			}
-			varValues[name] = cty.StringVal(override)
+			val, d := overrideValue(name, v, override)
+			if d != nil {
+				diags = append(diags, d)
+				continue
+			}
+			varValues[name] = val
 			continue
 		}
 
@@ -437,6 +444,30 @@ func BuildEvalContext(vars map[string]types.VariableDecl, overrides map[string]s
 	}
 
 	return ctx, diags
+}
+
+// overrideValue turns a --set string into the variable's declared type, so a
+// number variable stays a number and an enum only takes one of its values.
+func overrideValue(name string, v types.VariableDecl, raw string) (cty.Value, *hcl.Diagnostic) {
+	if len(v.AllowedValues) > 0 && !slices.Contains(v.AllowedValues, raw) {
+		return cty.NilVal, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Invalid value for enum variable",
+			Detail:   fmt.Sprintf("Variable %q accepts %s; got %q.", name, strings.Join(v.AllowedValues, ", "), raw),
+		}
+	}
+	if v.CtyType == cty.Number || v.CtyType == cty.Bool {
+		val, err := convert.Convert(cty.StringVal(raw), v.CtyType)
+		if err != nil {
+			return cty.NilVal, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  fmt.Sprintf("Invalid value for %s variable", v.Type),
+				Detail:   fmt.Sprintf("Variable %q is declared as %q; got %q.", name, v.Type, raw),
+			}
+		}
+		return val, nil
+	}
+	return cty.StringVal(raw), nil
 }
 
 func resolveBaseDir(dirs []string) string {

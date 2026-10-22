@@ -58,6 +58,8 @@ A `list` or `any` variable is the in-repo alternative to a `--values` JSON file,
 
 `--set` carries strings only, so it cannot override a `list` or `any` variable; kdef errors rather than quietly replacing the value with a string. Use `--values` for that.
 
+A `--set` value (or a `set = { ... }` entry in `root.kdef`) is converted to the variable's declared type: `--set replicas=3` gives a `number` variable the number 3, and `--set debug=true` gives a `bool` variable `true`. A value that does not fit the type, or an enum value outside the listed ones, fails the render instead of passing through.
+
 Imported files can contain variables and `ingress_defaults`. Files are processed in order; later imports override earlier ones. `vars.kdef` itself always takes final precedence. An `images {}` block in an imported file is ignored; see [Block Types: `images`](block-types.md#images-image-registry).
 
 ### Scoping in multi-project repositories
