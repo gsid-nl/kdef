@@ -122,7 +122,7 @@ variable "sites" {
 
   default = [
     { name = "acme-nl", hosts = ["acme.nl", "www.acme.nl"] },
-    { name = "gsid-nl", hosts = ["gsid.nl"] },
+    { name = "example-com", hosts = ["example.com"] },
   ]
 }
 `

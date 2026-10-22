@@ -6,16 +6,16 @@ import (
 )
 
 const csiSrc = `
-csidriver "storage.example.com" {
+csidriver "files.example.com" {
   lifecycle_modes = ["Ephemeral"]
   fs_group_policy = "None"
 }
 
 daemonset "csi" {
-  namespace = "files"
+  namespace = "storage"
 
   container "plugin" {
-    image = "registry.example.com/files:1"
+    image = "registry.example.com/files-csi:1"
 
     volume "pods" {
       mount_path        = "/var/lib/kubelet/pods"
@@ -33,7 +33,7 @@ deployment "cms" {
 
     volume "data" {
       mount_path        = "/data/cms"
-      csi_driver        = "storage.example.com"
+      csi_driver        = "files.example.com"
       csi_attributes    = { bucket = "shop", uid = "1000" }
       csi_secret        = "files-shop"
       mount_propagation = "HostToContainer"
@@ -55,7 +55,7 @@ func TestParseCSIDriverAndVolumes(t *testing.T) {
 		t.Errorf("daemonset volume: %+v", pods)
 	}
 	data := result.Deployments[0].Containers[0].Volumes[0]
-	if data.CSIDriver != "storage.example.com" || data.CSIAttributes["bucket"] != "shop" || data.CSISecret != "files-shop" || data.MountPropagation != "HostToContainer" {
+	if data.CSIDriver != "files.example.com" || data.CSIAttributes["bucket"] != "shop" || data.CSISecret != "files-shop" || data.MountPropagation != "HostToContainer" {
 		t.Errorf("csi volume: %+v", data)
 	}
 }

@@ -78,7 +78,7 @@ kdef render --dir k8s/ --values values.json
 {
   "sites": [
     {"name": "acme-nl", "hosts": ["acme.nl", "www.acme.nl"]},
-    {"name": "gsid-nl",   "hosts": ["gsid.nl", "www.gsid.nl"]}
+    {"name": "example-com",   "hosts": ["example.com", "www.example.com"]}
   ]
 }
 ```

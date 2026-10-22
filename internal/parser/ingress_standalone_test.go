@@ -63,10 +63,10 @@ deployment "cms-public" {
   }
 }
 
-ingress "cms-gsid-nl" {
+ingress "cms-example-com" {
   service_name = "cms-public-svc"
   port         = 80
-  hosts        = ["gsid.nl", "www.gsid.nl"]
+  hosts        = ["example.com", "www.example.com"]
   annotations = {
     "haproxy.org" = {
       "client-body-buffer-size" = "100m"
@@ -86,7 +86,7 @@ ingress "cms-gsid-nl" {
 	}
 	ing := config.Ingresses[0]
 
-	if ing.Name != "cms-gsid-nl" {
+	if ing.Name != "cms-example-com" {
 		t.Errorf("name should come from the block label, got %q", ing.Name)
 	}
 	if ing.Namespace != "cms" {
@@ -107,7 +107,7 @@ ingress "cms-gsid-nl" {
 	if ing.ServiceName != "cms-public-svc" || ing.Port != 80 {
 		t.Errorf("backend not parsed: service=%q port=%d", ing.ServiceName, ing.Port)
 	}
-	if got := ing.CertificateSecretName(); got != "gsid-nl-tls" {
+	if got := ing.CertificateSecretName(); got != "example-com-tls" {
 		t.Errorf("cert secret should derive from the first host, got %q", got)
 	}
 }
@@ -131,7 +131,7 @@ for "site" "var.sites" {
 	if err := os.WriteFile(valuesFile, []byte(`{
   "sites": [
     { "name": "acme-nl", "hosts": ["acme.nl", "www.acme.nl"] },
-    { "name": "gsid-nl",   "hosts": ["gsid.nl", "www.gsid.nl"] }
+    { "name": "example-com",   "hosts": ["example.com", "www.example.com"] }
   ]
 }`), 0644); err != nil {
 		t.Fatal(err)
@@ -160,8 +160,8 @@ for "site" "var.sites" {
 	if seen["cms-acme-nl"] != "acme-nl-tls" {
 		t.Errorf("unexpected cert secret for cms-acme-nl: %q", seen["cms-acme-nl"])
 	}
-	if seen["cms-gsid-nl"] != "gsid-nl-tls" {
-		t.Errorf("unexpected cert secret for cms-gsid-nl: %q", seen["cms-gsid-nl"])
+	if seen["cms-example-com"] != "example-com-tls" {
+		t.Errorf("unexpected cert secret for cms-example-com: %q", seen["cms-example-com"])
 	}
 }
 
@@ -196,10 +196,10 @@ func TestStandaloneIngress_NameAttributeOverridesLabel(t *testing.T) {
 		"root.kdef": rootWithIngressDefaults,
 		"cms/cms.kdef": `
 ingress "placeholder" {
-  name         = "cms-gsid-nl"
+  name         = "cms-example-com"
   service_name = "svc"
   port         = 80
-  host         = "gsid.nl"
+  host         = "example.com"
 }
 `,
 	})
@@ -210,7 +210,7 @@ ingress "placeholder" {
 	if len(config.Ingresses) != 1 {
 		t.Fatalf("expected 1 ingress, got %d", len(config.Ingresses))
 	}
-	if config.Ingresses[0].Name != "cms-gsid-nl" {
+	if config.Ingresses[0].Name != "cms-example-com" {
 		t.Errorf("explicit name should win over the label, got %q", config.Ingresses[0].Name)
 	}
 }

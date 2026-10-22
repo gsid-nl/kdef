@@ -610,11 +610,11 @@ An `ingress` block can also stand on its own at the top level, outside any workl
 Use it when ingresses outnumber workloads, or when the list of hosts is data rather than something hand-written: many domains pointing at a single service, a tenant list generated from a database and committed as a values file. An Ingress only names a Service in Kubernetes, so nothing about it requires a workload block to sit in.
 
 ```hcl
-ingress "cms-gsid-nl" {
+ingress "cms-example-com" {
   namespace    = "cms"                # optional; injected from root.kdef when omitted
   service_name = "cms-public-svc"     # required
   port         = 80                   # required
-  hosts        = ["gsid.nl", "www.gsid.nl"]
+  hosts        = ["example.com", "www.example.com"]
   tls          = true
 }
 ```
@@ -865,7 +865,7 @@ A CRD is cluster-scoped: it gets no namespace, and it renders before every other
 Tells kubelet how to talk to a CSI driver. The label is the driver name.
 
 ```hcl
-csidriver "files" {
+csidriver "files.example.com" {
   lifecycle_modes = ["Ephemeral"]   # "Persistent" and/or "Ephemeral"
   fs_group_policy = "None"          # "None", "File", "ReadWriteOnceWithFSType"
 }
@@ -880,7 +880,7 @@ A `volume` can also be an inline CSI volume, and any volume can set how mounts p
 ```hcl
 volume "data" {
   mount_path        = "/data/cms"
-  csi_driver        = "files"
+  csi_driver        = "files.example.com"
   csi_attributes    = { bucket = "shop", uid = "1000", gid = "1000" }
   csi_secret        = "files-shop"    # nodePublishSecretRef, in the pod's namespace
   read_only         = false

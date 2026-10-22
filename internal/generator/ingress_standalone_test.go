@@ -10,11 +10,11 @@ import (
 
 func TestGenerateStandaloneIngress(t *testing.T) {
 	ing := types.IngressConfig{
-		Name:        "cms-gsid-nl",
+		Name:        "cms-example-com",
 		Namespace:   "cms",
 		ServiceName: "cms-public-svc",
 		Port:        80,
-		Hosts:       []string{"gsid.nl", "www.gsid.nl"},
+		Hosts:       []string{"example.com", "www.example.com"},
 		TLS:         true,
 		Issuer:      "letsencrypt-production",
 		Class:       "haproxy",
@@ -29,7 +29,7 @@ func TestGenerateStandaloneIngress(t *testing.T) {
 	if !ok {
 		t.Fatalf("first manifest is %T, want *networkingv1.Ingress", manifests[0].Object)
 	}
-	if obj.Name != "cms-gsid-nl" || obj.Namespace != "cms" {
+	if obj.Name != "cms-example-com" || obj.Namespace != "cms" {
 		t.Errorf("unexpected metadata: %s/%s", obj.Namespace, obj.Name)
 	}
 	if got := obj.Labels["app.kubernetes.io/name"]; got != "cms-public-svc" {
@@ -45,23 +45,23 @@ func TestGenerateStandaloneIngress(t *testing.T) {
 	if backend.Name != "cms-public-svc" || backend.Port.Number != 80 {
 		t.Errorf("unexpected backend %s:%d", backend.Name, backend.Port.Number)
 	}
-	if len(obj.Spec.TLS) != 1 || obj.Spec.TLS[0].SecretName != "gsid-nl-tls" {
+	if len(obj.Spec.TLS) != 1 || obj.Spec.TLS[0].SecretName != "example-com-tls" {
 		t.Errorf("unexpected TLS block: %+v", obj.Spec.TLS)
 	}
 
 	cert := manifests[1].Object
-	if got := cert.(interface{ GetName() string }).GetName(); got != "gsid-nl-tls" {
+	if got := cert.(interface{ GetName() string }).GetName(); got != "example-com-tls" {
 		t.Errorf("unexpected certificate name %q", got)
 	}
 }
 
 func TestGenerateStandaloneIngress_GatewayMode(t *testing.T) {
 	ing := types.IngressConfig{
-		Name:        "cms-gsid-nl",
+		Name:        "cms-example-com",
 		Namespace:   "cms",
 		ServiceName: "cms-public-svc",
 		Port:        80,
-		Host:        "gsid.nl",
+		Host:        "example.com",
 	}
 
 	manifests := GenerateStandaloneIngress(ing, &types.IngressDefaults{
