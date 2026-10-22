@@ -17,6 +17,7 @@ type KdefConfig struct {
 	ClusterRoles            []ClusterRoleConfig
 	ClusterRoleBindings     []ClusterRoleBindingConfig
 	CRDs                    []CRDConfig
+	CSIDrivers              []CSIDriverConfig
 	IngressDefaults         *IngressDefaults
 	Warnings                []string // non-fatal validation warnings
 }

@@ -19,6 +19,7 @@ import (
 var kindApplyOrder = map[string]int{
 	"Namespace":          0,
 	"CustomResourceDefinition": 1,
+	"CSIDriver":                1,
 	"ServiceAccount":     2,
 	"ClusterRole":        3,
 	"ClusterRoleBinding": 4,

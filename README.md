@@ -95,7 +95,7 @@ kdef apply --dir k8s/ --dry-run   # preview first
 
 ## Documentation
 
-- [Block Types](docs/block-types.md): `root.kdef`, `deployment`, `cronjob`, `configmap`, `secret`, `sealedsecret`, `persistentvolumeclaim`, `daemonset`, `statefulset`, `clusterrole`, `clusterrolebinding`, `crd`
+- [Block Types](docs/block-types.md): `root.kdef`, `deployment`, `cronjob`, `configmap`, `secret`, `sealedsecret`, `persistentvolumeclaim`, `daemonset`, `statefulset`, `clusterrole`, `clusterrolebinding`, `crd`, `csidriver`
 - [Variables](docs/variables.md) — typed variables, `env` (local environment), imports, ingress defaults, environment overrides
 - [Functions](docs/functions.md) — `image()`, `secret()`, `configmap()`, `file()`
 - [Conditionals and Loops](docs/conditionals-and-loops.md) — `if` blocks, `for` loops, ternary

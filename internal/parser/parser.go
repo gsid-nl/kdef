@@ -112,6 +112,7 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		config.ClusterRoles = append(config.ClusterRoles, result.ClusterRoles...)
 		config.ClusterRoleBindings = append(config.ClusterRoleBindings, result.ClusterRoleBindings...)
 		config.CRDs = append(config.CRDs, result.CRDs...)
+		config.CSIDrivers = append(config.CSIDrivers, result.CSIDrivers...)
 	}
 
 	// Phase 3: apply ingress defaults to all apps
@@ -194,6 +195,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	merged.ClusterRoles = append(merged.ClusterRoles, rootDefs.ClusterRoles...)
 	merged.ClusterRoleBindings = append(merged.ClusterRoleBindings, rootDefs.ClusterRoleBindings...)
 	merged.CRDs = append(merged.CRDs, rootDefs.CRDs...)
+	merged.CSIDrivers = append(merged.CSIDrivers, rootDefs.CSIDrivers...)
 
 	for name, entry := range root.Deployments {
 		subDir := filepath.Join(filepath.Dir(rootFile), entry.Path)
@@ -258,6 +260,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 		merged.ClusterRoles = append(merged.ClusterRoles, config.ClusterRoles...)
 		merged.ClusterRoleBindings = append(merged.ClusterRoleBindings, config.ClusterRoleBindings...)
 		merged.CRDs = append(merged.CRDs, config.CRDs...)
+		merged.CSIDrivers = append(merged.CSIDrivers, config.CSIDrivers...)
 	}
 
 	// Validate: every resource must have a namespace
@@ -980,6 +983,7 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 		config.ClusterRoles = append(config.ClusterRoles, result.ClusterRoles...)
 		config.ClusterRoleBindings = append(config.ClusterRoleBindings, result.ClusterRoleBindings...)
 		config.CRDs = append(config.CRDs, result.CRDs...)
+		config.CSIDrivers = append(config.CSIDrivers, result.CSIDrivers...)
 	}
 
 	return config, nil

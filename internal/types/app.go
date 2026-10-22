@@ -138,6 +138,13 @@ type VolumeConfig struct {
 	PVC          string // PersistentVolumeClaim name
 	HostPath     string // host path
 	HostPathType string // optional: DirectoryOrCreate, FileOrCreate, Directory, File, Socket, etc.
+	// CSI inline volume: driver name, its volumeAttributes, and the Secret
+	// passed as nodePublishSecretRef.
+	CSIDriver     string
+	CSIAttributes map[string]string
+	CSISecret     string
+	// MountPropagation: "None" (default), "HostToContainer", "Bidirectional".
+	MountPropagation string
 }
 
 // ProbeConfig represents a Kubernetes probe (liveness, readiness, or startup).

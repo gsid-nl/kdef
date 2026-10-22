@@ -47,6 +47,7 @@ type FileResult struct {
 	ClusterRoles           []types.ClusterRoleConfig
 	ClusterRoleBindings    []types.ClusterRoleBindingConfig
 	CRDs                   []types.CRDConfig
+	CSIDrivers             []types.CSIDriverConfig
 }
 
 func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnostics) {
@@ -70,6 +71,7 @@ func parseFileBody(body hcl.Body, ctx *hcl.EvalContext) (FileResult, hcl.Diagnos
 		result.ClusterRoles = append(result.ClusterRoles, fr.ClusterRoles...)
 		result.ClusterRoleBindings = append(result.ClusterRoleBindings, fr.ClusterRoleBindings...)
 		result.CRDs = append(result.CRDs, fr.CRDs...)
+		result.CSIDrivers = append(result.CSIDrivers, fr.CSIDrivers...)
 	}
 
 	// Pre-processing: extract and evaluate "if" blocks
@@ -104,6 +106,7 @@ var topLevelSchema = &hcl.BodySchema{
 		{Type: "clusterrole", LabelNames: []string{"name"}},
 		{Type: "clusterrolebinding", LabelNames: []string{"name"}},
 		{Type: "crd", LabelNames: []string{"name"}},
+		{Type: "csidriver", LabelNames: []string{"name"}},
 		{Type: "images"},
 	},
 }
@@ -187,6 +190,12 @@ func parseBlocksFromBody(body hcl.Body, ctx *hcl.EvalContext, result *FileResult
 			diags = append(diags, moreDiags...)
 			if !moreDiags.HasErrors() {
 				result.CRDs = append(result.CRDs, crd)
+			}
+		case "csidriver":
+			d, moreDiags := parseCSIDriverBlock(block, ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				result.CSIDrivers = append(result.CSIDrivers, d)
 			}
 		}
 	}
@@ -608,6 +617,10 @@ func parseVolumeBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.VolumeConfi
 			{Name: "pvc"},
 			{Name: "host_path"},
 			{Name: "host_path_type"},
+			{Name: "csi_driver"},
+			{Name: "csi_attributes"},
+			{Name: "csi_secret"},
+			{Name: "mount_propagation"},
 		},
 	}
 
@@ -691,6 +704,54 @@ func parseVolumeBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.VolumeConfi
 		diags = append(diags, moreDiags...)
 		if !moreDiags.HasErrors() {
 			vol.HostPathType = val.AsString()
+		}
+	}
+
+	for name, dest := range map[string]*string{"csi_driver": &vol.CSIDriver, "csi_secret": &vol.CSISecret} {
+		if attr, ok := content.Attributes[name]; ok {
+			val, moreDiags := attr.Expr.Value(ctx)
+			diags = append(diags, moreDiags...)
+			if !moreDiags.HasErrors() {
+				*dest = val.AsString()
+			}
+		}
+	}
+
+	if attr, ok := content.Attributes["csi_attributes"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() && val.CanIterateElements() {
+			vol.CSIAttributes = make(map[string]string)
+			for it := val.ElementIterator(); it.Next(); {
+				k, v := it.Element()
+				vol.CSIAttributes[k.AsString()] = v.AsString()
+			}
+		}
+	}
+	if (vol.CSIAttributes != nil || vol.CSISecret != "") && vol.CSIDriver == "" {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "csi_driver required",
+			Detail:   fmt.Sprintf("volume %q sets csi_attributes or csi_secret without csi_driver", vol.Name),
+			Subject:  block.DefRange.Ptr(),
+		})
+	}
+
+	if attr, ok := content.Attributes["mount_propagation"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			vol.MountPropagation = val.AsString()
+			switch vol.MountPropagation {
+			case "None", "HostToContainer", "Bidirectional":
+			default:
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Invalid mount_propagation",
+					Detail:   fmt.Sprintf("mount_propagation %q must be \"None\", \"HostToContainer\" or \"Bidirectional\"", vol.MountPropagation),
+					Subject:  attr.Range.Ptr(),
+				})
+			}
 		}
 	}
 

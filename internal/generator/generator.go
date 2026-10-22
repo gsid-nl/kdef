@@ -76,6 +76,9 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 	for _, crd := range config.CRDs {
 		result["crd-"+crd.Name] = []Manifest{{Object: GenerateCRD(crd)}}
 	}
+	for _, d := range config.CSIDrivers {
+		result["csidriver-"+d.Name] = []Manifest{{Object: GenerateCSIDriver(d)}}
+	}
 	return result
 }
 

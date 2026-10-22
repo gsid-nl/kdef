@@ -46,6 +46,7 @@ var topLevelBlocks = []BlockSchema{
 	clusterRoleSchema,
 	clusterRoleBindingSchema,
 	crdSchema,
+	csiDriverSchema,
 	standaloneIngressSchema,
 	imagesSchema,
 	ingressDefaultsSchema,
@@ -198,6 +199,19 @@ var crdSchema = BlockSchema{
 	},
 	SubBlocks: []BlockSchema{
 		crdVersionSchema,
+	},
+}
+
+var csiDriverSchema = BlockSchema{
+	Type:   "csidriver",
+	Labels: 1,
+	Doc:    "Kubernetes CSIDriver (how kubelet talks to a CSI driver)",
+	Attributes: []AttrSchema{
+		{Name: "attach_required", Doc: "Needs a ControllerPublish step (default false)"},
+		{Name: "pod_info_on_mount", Doc: "Pass pod name, namespace and UID on mount (default false)"},
+		{Name: "requires_republish", Doc: "Call NodePublishVolume periodically (default false)"},
+		{Name: "fs_group_policy", Doc: `"None", "File" or "ReadWriteOnceWithFSType"`},
+		{Name: "lifecycle_modes", Doc: `List of "Persistent" and/or "Ephemeral"`},
 	},
 }
 
@@ -455,6 +469,10 @@ var volumeSchema = BlockSchema{
 		{Name: "pvc", Doc: "PersistentVolumeClaim name"},
 		{Name: "host_path", Doc: "Host path to mount"},
 		{Name: "host_path_type", Doc: `Host path type: "DirectoryOrCreate", "FileOrCreate", "Directory", "File", "Socket", etc.`},
+		{Name: "csi_driver", Doc: "CSI driver for an inline (ephemeral) CSI volume"},
+		{Name: "csi_attributes", Doc: "volumeAttributes passed to the CSI driver (map)"},
+		{Name: "csi_secret", Doc: "Secret passed to the CSI driver as nodePublishSecretRef"},
+		{Name: "mount_propagation", Doc: `"None" (default), "HostToContainer" or "Bidirectional"`},
 	},
 }
 
@@ -650,6 +668,7 @@ func init() {
 	registerBlock(&clusterRoleSchema)
 	registerBlock(&clusterRoleBindingSchema)
 	registerBlock(&crdSchema)
+	registerBlock(&csiDriverSchema)
 	registerBlock(&crdVersionSchema)
 	registerBlock(&crdColumnSchema)
 	registerBlock(&policyRuleSchema)

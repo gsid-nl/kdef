@@ -98,6 +98,10 @@ func buildVolumeMount(v types.VolumeConfig) corev1.VolumeMount {
 	if v.SubPath != "" {
 		vm.SubPath = v.SubPath
 	}
+	if v.MountPropagation != "" {
+		mp := corev1.MountPropagationMode(v.MountPropagation)
+		vm.MountPropagation = &mp
+	}
 	return vm
 }
 
@@ -135,6 +139,15 @@ func buildVolume(v types.VolumeConfig) corev1.Volume {
 			hp.Type = &t
 		}
 		vol.VolumeSource = corev1.VolumeSource{HostPath: hp}
+	case v.CSIDriver != "":
+		csi := &corev1.CSIVolumeSource{Driver: v.CSIDriver, VolumeAttributes: v.CSIAttributes}
+		if v.ReadOnly {
+			csi.ReadOnly = &v.ReadOnly
+		}
+		if v.CSISecret != "" {
+			csi.NodePublishSecretRef = &corev1.LocalObjectReference{Name: v.CSISecret}
+		}
+		vol.VolumeSource = corev1.VolumeSource{CSI: csi}
 	}
 	return vol
 }

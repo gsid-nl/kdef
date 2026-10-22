@@ -860,6 +860,36 @@ Each `version "<name>"` block:
 
 A CRD is cluster-scoped: it gets no namespace, and it renders before every other resource so the custom resources that use it can be applied in the same run.
 
+## `csidriver`: Kubernetes CSIDriver
+
+Tells kubelet how to talk to a CSI driver. The label is the driver name.
+
+```hcl
+csidriver "storage.example.com" {
+  lifecycle_modes = ["Ephemeral"]   # "Persistent" and/or "Ephemeral"
+  fs_group_policy = "None"          # "None", "File", "ReadWriteOnceWithFSType"
+}
+```
+
+`attach_required`, `pod_info_on_mount` and `requires_republish` default to `false`.
+
+## Volumes: CSI and mount propagation
+
+A `volume` can also be an inline CSI volume, and any volume can set how mounts propagate:
+
+```hcl
+volume "data" {
+  mount_path        = "/data/cms"
+  csi_driver        = "storage.example.com"
+  csi_attributes    = { bucket = "shop", uid = "1000", gid = "1000" }
+  csi_secret        = "files-shop"    # nodePublishSecretRef, in the pod's namespace
+  read_only         = false
+  mount_propagation = "HostToContainer"   # "None" (default), "HostToContainer", "Bidirectional"
+}
+```
+
+A CSI node plugin's own DaemonSet mounts the kubelet pods directory with `mount_propagation = "Bidirectional"` (and a privileged `security_context`); pods using a FUSE-backed CSI volume mount it with `HostToContainer`, so a mount the driver re-creates after a restart reaches them.
+
 ## Pod scheduling: `toleration`, `node_selector`, host namespaces
 
 All workload block types (`deployment`, `daemonset`, `statefulset`, `cronjob`) accept:
