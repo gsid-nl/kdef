@@ -10,7 +10,6 @@ import = "../shared/global-vars.kdef"
 import = [
   "../shared/global-vars.kdef",
   "defaults.kdef",
-  "images.kdef",
 ]
 
 variable "environment" {
@@ -59,7 +58,7 @@ A `list` or `any` variable is the in-repo alternative to a `--values` JSON file,
 
 `--set` carries strings only, so it cannot override a `list` or `any` variable; kdef errors rather than quietly replacing the value with a string. Use `--values` for that.
 
-Imported files can contain variables and `ingress_defaults`. Files are processed in order; later imports override earlier ones. `vars.kdef` itself always takes final precedence.
+Imported files can contain variables and `ingress_defaults`. Files are processed in order; later imports override earlier ones. `vars.kdef` itself always takes final precedence. An `images {}` block in an imported file is ignored; see [Block Types: `images`](block-types.md#images-image-registry).
 
 ### Scoping in multi-project repositories
 
@@ -77,7 +76,7 @@ logging/
 └── alloy/*.kdef              # cannot see monitoring/vars.kdef
 ```
 
-The same scoping rule applies to `images {}` blocks (see [Functions — `image()`](functions.md#image--image-registry)).
+The same scoping rule applies to `images {}` blocks (see [Block Types: `images`](block-types.md#images-image-registry)).
 
 ## Usage
 

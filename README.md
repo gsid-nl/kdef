@@ -95,7 +95,7 @@ kdef apply --dir k8s/ --dry-run   # preview first
 
 ## Documentation
 
-- [Block Types](docs/block-types.md): `root.kdef`, `deployment`, `cronjob`, `configmap`, `secret`, `sealedsecret`, `persistentvolumeclaim`, `daemonset`, `statefulset`, `clusterrole`, `clusterrolebinding`, `crd`, `csidriver`
+- [Block Types](docs/block-types.md): `root.kdef`, `images`, `deployment`, `cronjob`, `configmap`, `secret`, `sealedsecret`, `persistentvolumeclaim`, `daemonset`, `statefulset`, `clusterrole`, `clusterrolebinding`, `crd`, `csidriver`
 - [Variables](docs/variables.md) — typed variables, `env` (local environment), imports, ingress defaults, environment overrides
 - [Functions](docs/functions.md) — `image()`, `secret()`, `configmap()`, `file()`
 - [Conditionals and Loops](docs/conditionals-and-loops.md) — `if` blocks, `for` loops, ternary
@@ -110,7 +110,7 @@ kdef apply --dir k8s/ --dry-run   # preview first
 ```
 k8s/
 ├── vars.kdef                 # variables + ingress defaults + imports
-├── images.kdef               # image registry (name -> registry/image:tag)
+├── images.kdef               # image registry, see docs/block-types.md#images-image-registry
 ├── api.kdef                  # deployment: api + nginx sidecar
 ├── web.kdef                  # deployment: web + nginx sidecar
 ├── cronjobs.kdef             # cronjob definitions

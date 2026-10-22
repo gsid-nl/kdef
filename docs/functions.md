@@ -27,7 +27,7 @@ deployment "api" {
 }
 ```
 
-The `images {}` block can be placed in any `.kdef` file — a dedicated `images.kdef`, inside `vars.kdef`, or alongside deployments. Multiple blocks in the same directory are merged.
+The `images {}` block can be placed in any `.kdef` file: a dedicated `images.kdef`, inside `vars.kdef`, or alongside deployments. Multiple blocks in the same directory are merged. See [Block Types: `images`](block-types.md#images-image-registry) for the full rules.
 
 ### Scoping in multi-project repositories
 

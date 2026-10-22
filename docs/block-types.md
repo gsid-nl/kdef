@@ -138,6 +138,47 @@ The mode is repo-wide: switching it re-renders every ingress in the tree, so no 
 
 ---
 
+## `images`: Image Registry
+
+An `images {}` block is a lookup table of container images. Each key is a short name of your choosing, each value the full image reference. Containers point at the short name with `image("name")`, so the registry, path and tag of every image live in one place and a version bump is a one-line change.
+
+By convention the block lives in its own `images.kdef` next to the deployments. The file name carries no meaning: kdef reads `images {}` blocks from every `.kdef` file in the directory.
+
+```hcl
+# images.kdef
+images {
+  api           = "registry.example.com/my-app/api:1.4.2"
+  worker        = "registry.example.com/my-app/worker:1.4.2"
+  nginx         = "nginx:1.27-alpine"
+  node-exporter = "quay.io/prometheus/node-exporter:v1.8.2"
+}
+```
+
+```hcl
+# api.kdef
+deployment "api" {
+  container "api" {
+    image = image("api")       # registry.example.com/my-app/api:1.4.2
+  }
+
+  container "nginx" {
+    image = image("nginx")     # nginx:1.27-alpine
+  }
+}
+```
+
+Rules:
+
+- **Literal strings only.** The registry is read before variables exist, so a value like `"api:${var.tag}"` fails with `Variables not allowed`. When a tag has to vary per environment, write the reference on the container instead: `image = "registry.example.com/my-app/api:${var.api_tag}"`.
+- **Unknown names fail the render** with `image "apii" not found; define it in an images {} block`.
+- **Blocks merge per directory.** Several files may each hold an `images {}` block. When two files in the same directory define the same name, the file that sorts last alphabetically wins without a warning.
+- **Scoped by directory.** A project sees the `images {}` blocks in its own directory and, under a `root.kdef`, in every directory above it up to the root, with the closest one winning. See [Functions: scoping](functions.md#scoping-in-multi-project-repositories).
+- **Not carried by `import` or `--env`.** `import = [...]` in `vars.kdef` brings in variables and `ingress_defaults` only, and `environments/<env>.kdef` cannot change an image. To share images across projects, put the block in a common ancestor directory under `root.kdef`.
+
+`image()` takes any string expression, so `image(var.cache_image)` picks an entry by variable.
+
+---
+
 ## `deployment` — Kubernetes Deployment
 
 The primary block type. Defines a Deployment with explicit containers, an optional Service, and zero or more Ingresses (one resource per `ingress {}` block).
