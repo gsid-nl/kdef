@@ -865,7 +865,7 @@ A CRD is cluster-scoped: it gets no namespace, and it renders before every other
 Tells kubelet how to talk to a CSI driver. The label is the driver name.
 
 ```hcl
-csidriver "storage.example.com" {
+csidriver "files" {
   lifecycle_modes = ["Ephemeral"]   # "Persistent" and/or "Ephemeral"
   fs_group_policy = "None"          # "None", "File", "ReadWriteOnceWithFSType"
 }
@@ -880,7 +880,7 @@ A `volume` can also be an inline CSI volume, and any volume can set how mounts p
 ```hcl
 volume "data" {
   mount_path        = "/data/cms"
-  csi_driver        = "storage.example.com"
+  csi_driver        = "files"
   csi_attributes    = { bucket = "shop", uid = "1000", gid = "1000" }
   csi_secret        = "files-shop"    # nodePublishSecretRef, in the pod's namespace
   read_only         = false
