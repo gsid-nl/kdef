@@ -2,8 +2,10 @@ package parser
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -197,7 +199,9 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	merged.CRDs = append(merged.CRDs, rootDefs.CRDs...)
 	merged.CSIDrivers = append(merged.CSIDrivers, rootDefs.CSIDrivers...)
 
-	for name, entry := range root.Deployments {
+	// Sorted, so entries sharing a path render in a stable order.
+	for _, name := range slices.Sorted(maps.Keys(root.Deployments)) {
+		entry := root.Deployments[name]
 		subDir := filepath.Join(filepath.Dir(rootFile), entry.Path)
 		if _, err := os.Stat(subDir); err != nil {
 			return nil, fmt.Errorf("deployment %q: directory %q not found: %w", name, entry.Path, err)

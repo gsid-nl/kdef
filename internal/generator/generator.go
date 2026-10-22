@@ -40,32 +40,40 @@ func Generate(config *types.KdefConfig) map[string][]Manifest {
 		}
 	}
 
+	// Namespaced resources append: the same name can live in two namespaces
+	// (two root.kdef entries sharing a path), and a deployment and a cronjob
+	// may share a name. Assigning would silently drop all but the last.
 	for _, dep := range config.Deployments {
-		result[dep.Name] = GenerateDeploymentV2(dep, config.IngressDefaults)
+		result[dep.Name] = append(result[dep.Name], GenerateDeploymentV2(dep, config.IngressDefaults)...)
 	}
 	for _, ds := range config.DaemonSets {
-		result[ds.Name] = GenerateDaemonSet(ds)
+		result[ds.Name] = append(result[ds.Name], GenerateDaemonSet(ds)...)
 	}
 	for _, sts := range config.StatefulSets {
-		result[sts.Name] = GenerateStatefulSet(sts, config.IngressDefaults)
+		result[sts.Name] = append(result[sts.Name], GenerateStatefulSet(sts, config.IngressDefaults)...)
 	}
 	for _, cj := range config.CronJobs {
-		result[cj.Name] = GenerateCronJobManifest(cj)
+		result[cj.Name] = append(result[cj.Name], GenerateCronJobManifest(cj)...)
 	}
 	for _, cm := range config.ConfigMaps {
-		result["configmap-"+cm.Name] = []Manifest{{Object: GenerateConfigMap(cm)}}
+		key := "configmap-" + cm.Name
+		result[key] = append(result[key], Manifest{Object: GenerateConfigMap(cm)})
 	}
 	for _, ing := range config.Ingresses {
-		result["ingress-"+ing.Name] = GenerateStandaloneIngress(ing, config.IngressDefaults)
+		key := "ingress-" + ing.Name
+		result[key] = append(result[key], GenerateStandaloneIngress(ing, config.IngressDefaults)...)
 	}
 	for _, s := range config.Secrets {
-		result["secret-"+s.Name] = []Manifest{{Object: GenerateSecret(s)}}
+		key := "secret-" + s.Name
+		result[key] = append(result[key], Manifest{Object: GenerateSecret(s)})
 	}
 	for _, ss := range config.SealedSecrets {
-		result["sealedsecret-"+ss.Name] = []Manifest{{Object: GenerateSealedSecret(ss)}}
+		key := "sealedsecret-" + ss.Name
+		result[key] = append(result[key], Manifest{Object: GenerateSealedSecret(ss)})
 	}
 	for _, pvc := range config.PersistentVolumeClaims {
-		result["pvc-"+pvc.Name] = []Manifest{{Object: GeneratePersistentVolumeClaim(pvc)}}
+		key := "pvc-" + pvc.Name
+		result[key] = append(result[key], Manifest{Object: GeneratePersistentVolumeClaim(pvc)})
 	}
 	for _, cr := range config.ClusterRoles {
 		result["clusterrole-"+cr.Name] = []Manifest{{Object: GenerateClusterRole(cr)}}

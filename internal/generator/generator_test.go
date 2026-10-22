@@ -203,3 +203,27 @@ func TestGenerateDeploymentNoService(t *testing.T) {
 		t.Error("yaml should not contain Service for worker-type deployment")
 	}
 }
+
+func TestGenerateKeepsResourcesSharingAName(t *testing.T) {
+	config := &types.KdefConfig{
+		Deployments: []types.DeploymentConfig{
+			{Name: "api", Namespace: "production", Containers: []types.ContainerConfig{{Name: "api", Image: "nginx"}}},
+			{Name: "api", Namespace: "staging", Containers: []types.ContainerConfig{{Name: "api", Image: "nginx"}}},
+		},
+		CronJobs: []types.CronJobConfig{
+			{Name: "api", Namespace: "production", Image: "busybox", Schedule: "* * * * *"},
+		},
+	}
+
+	out, err := RenderAllYAML(Generate(config))
+	if err != nil {
+		t.Fatalf("render error: %v", err)
+	}
+	yaml := string(out)
+	if n := strings.Count(yaml, "kind: Deployment"); n != 2 {
+		t.Errorf("expected 2 Deployments, got %d", n)
+	}
+	if n := strings.Count(yaml, "kind: CronJob"); n != 1 {
+		t.Errorf("expected 1 CronJob, got %d", n)
+	}
+}

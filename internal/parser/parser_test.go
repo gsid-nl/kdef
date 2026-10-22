@@ -279,3 +279,49 @@ func TestLoadWithOverrides(t *testing.T) {
 		t.Errorf("ingress host: expected api.acme.dev, got %q", dep.Ingresses[0].Host)
 	}
 }
+
+func TestLoadRootKdef_SharedPath(t *testing.T) {
+	dir := t.TempDir()
+	root := `
+namespaces = ["production", "staging"]
+
+deployments = {
+  "api-staging" = {
+    path      = "api"
+    namespace = "staging"
+  }
+  "api" = {
+    path      = "api"
+    namespace = "production"
+  }
+}
+`
+	app := `
+deployment "api" {
+  container "api" {
+    image = "nginx"
+  }
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "root.kdef"), []byte(root), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "api"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "api", "app.kdef"), []byte(app), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config, err := Load(dir, nil)
+	if err != nil {
+		t.Fatalf("load error: %v", err)
+	}
+	if len(config.Deployments) != 2 {
+		t.Fatalf("expected 2 deployments, got %d", len(config.Deployments))
+	}
+	// Entries load in name order: "api" before "api-staging".
+	if config.Deployments[0].Namespace != "production" || config.Deployments[1].Namespace != "staging" {
+		t.Errorf("namespaces = %q, %q; want production, staging", config.Deployments[0].Namespace, config.Deployments[1].Namespace)
+	}
+}
