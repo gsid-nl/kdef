@@ -92,6 +92,7 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		return nil, err
 	}
 
+	dups := newDuplicateCheck()
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".kdef") || skipFiles[entry.Name()] {
 			continue
@@ -102,6 +103,7 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		if diags.HasErrors() {
 			return nil, diags
 		}
+		dups.add(result.asConfig(), entry.Name())
 		config.CronJobs = append(config.CronJobs, result.CronJobs...)
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
 		config.Ingresses = append(config.Ingresses, result.Ingresses...)
@@ -115,6 +117,9 @@ func loadSingleProject(opts LoadOptions) (*types.KdefConfig, error) {
 		config.ClusterRoleBindings = append(config.ClusterRoleBindings, result.ClusterRoleBindings...)
 		config.CRDs = append(config.CRDs, result.CRDs...)
 		config.CSIDrivers = append(config.CSIDrivers, result.CSIDrivers...)
+	}
+	if err := dups.err(); err != nil {
+		return nil, err
 	}
 
 	// Phase 3: apply ingress defaults to all apps
@@ -199,6 +204,9 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 	merged.CRDs = append(merged.CRDs, rootDefs.CRDs...)
 	merged.CSIDrivers = append(merged.CSIDrivers, rootDefs.CSIDrivers...)
 
+	dups := newDuplicateCheck()
+	dups.add(rootDefs, "root-level .kdef files")
+
 	// Sorted, so entries sharing a path render in a stable order.
 	for _, name := range slices.Sorted(maps.Keys(root.Deployments)) {
 		entry := root.Deployments[name]
@@ -251,6 +259,7 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 		if entry.ServiceAccount != "" {
 			injectServiceAccount(config, entry.ServiceAccount)
 		}
+		dups.add(config, fmt.Sprintf("root.kdef entry %q", name))
 
 		merged.Deployments = append(merged.Deployments, config.Deployments...)
 		merged.DaemonSets = append(merged.DaemonSets, config.DaemonSets...)
@@ -265,6 +274,9 @@ func loadRootProject(rootFile string, opts LoadOptions) (*types.KdefConfig, erro
 		merged.ClusterRoleBindings = append(merged.ClusterRoleBindings, config.ClusterRoleBindings...)
 		merged.CRDs = append(merged.CRDs, config.CRDs...)
 		merged.CSIDrivers = append(merged.CSIDrivers, config.CSIDrivers...)
+	}
+	if err := dups.err(); err != nil {
+		return nil, err
 	}
 
 	// Validate: every resource must have a namespace
@@ -965,6 +977,7 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 		return nil, err
 	}
 
+	dups := newDuplicateCheck()
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".kdef") || skipFiles[entry.Name()] {
 			continue
@@ -975,6 +988,7 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 		if diags.HasErrors() {
 			return nil, fmt.Errorf("parse root-level %s: %w", entry.Name(), diags)
 		}
+		dups.add(result.asConfig(), entry.Name())
 		config.CronJobs = append(config.CronJobs, result.CronJobs...)
 		config.ConfigMaps = append(config.ConfigMaps, result.ConfigMaps...)
 		config.Ingresses = append(config.Ingresses, result.Ingresses...)
@@ -988,6 +1002,9 @@ func parseRootDefinitionFiles(rootDir string, root *types.RootConfig, opts LoadO
 		config.ClusterRoleBindings = append(config.ClusterRoleBindings, result.ClusterRoleBindings...)
 		config.CRDs = append(config.CRDs, result.CRDs...)
 		config.CSIDrivers = append(config.CSIDrivers, result.CSIDrivers...)
+	}
+	if err := dups.err(); err != nil {
+		return nil, err
 	}
 
 	return config, nil

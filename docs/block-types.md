@@ -90,7 +90,8 @@ repo/
 
 - Namespace must be in the `namespaces` list (if defined)
 - Service account must be defined as a `service_account` block (if referenced)
-- Every resource must have a namespace — missing namespace is an error
+- Every resource must have a namespace: a missing namespace is an error
+- No two resources may share a kind, name and namespace. Two entries with the same `path` therefore need different namespaces. The Service a workload generates counts too, so a deployment and a statefulset of the same name in one namespace collide. Every duplicate is listed with where both copies came from (a file, or a `root.kdef` entry), and nothing renders until they are resolved. The same check runs without `root.kdef`.
 
 All CLI commands work transparently:
 

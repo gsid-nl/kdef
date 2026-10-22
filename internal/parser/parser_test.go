@@ -325,3 +325,103 @@ deployment "api" {
 		t.Errorf("namespaces = %q, %q; want production, staging", config.Deployments[0].Namespace, config.Deployments[1].Namespace)
 	}
 }
+
+func TestLoadRootKdef_DuplicateResourceRejected(t *testing.T) {
+	dir := t.TempDir()
+	root := `
+namespaces = ["production"]
+
+deployments = {
+  "api" = {
+    path      = "api"
+    namespace = "production"
+  }
+  "api-canary" = {
+    path      = "api"
+    namespace = "production"
+  }
+}
+`
+	app := `
+deployment "api" {
+  container "api" {
+    image = "nginx"
+  }
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "root.kdef"), []byte(root), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "api"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "api", "app.kdef"), []byte(app), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Load(dir, nil)
+	if err == nil {
+		t.Fatal("expected an error for two entries rendering the same deployment into one namespace")
+	}
+	for _, want := range []string{`deployment "api" in namespace "production"`, `root.kdef entry "api"`, `root.kdef entry "api-canary"`} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error should mention %s, got: %v", want, err)
+		}
+	}
+}
+
+func TestLoadDuplicateResourcesAcrossFiles(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"a.kdef": `
+deployment "api" {
+  namespace = "production"
+  container "api" {
+    image = "nginx"
+  }
+  service {
+    port "80" "http" {}
+  }
+}
+`,
+		"b.kdef": `
+statefulset "api" {
+  namespace = "production"
+  container "api" {
+    image = "nginx"
+  }
+  service {
+    port "80" "http" {}
+  }
+}
+
+configmap "settings" {
+  namespace = "production"
+  data      = {}
+}
+
+configmap "settings" {
+  namespace = "production"
+  data      = {}
+}
+`,
+	}
+	for name, src := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(src), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	_, err := Load(dir, nil)
+	if err == nil {
+		t.Fatal("expected a duplicate resources error")
+	}
+	for _, want := range []string{
+		`service "api" in namespace "production" is defined in both a.kdef and b.kdef`,
+		`configmap "settings" in namespace "production" is defined twice in b.kdef`,
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error should contain %q, got: %v", want, err)
+		}
+	}
+}
