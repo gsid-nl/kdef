@@ -27,4 +27,6 @@ type CronJobConfig struct {
 	Deadline           string // e.g. "4m"
 	Restart            string // "OnFailure", "Never" (default: "OnFailure")
 	Suspend            *bool  // nil = omit from manifest (k8s default false)
+	HistoryLimit       *int32 // successfulJobsHistoryLimit; nil = k8s default 3
+	FailedHistoryLimit *int32 // failedJobsHistoryLimit; nil = k8s default 1
 }

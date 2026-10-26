@@ -27,6 +27,8 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 		{Name: "deadline"},
 		{Name: "restart"},
 		{Name: "suspend"},
+		{Name: "history_limit"},
+		{Name: "failed_history_limit"},
 	}
 	attrs = append(attrs, hostPodAttrs()...)
 	schema := &hcl.BodySchema{
@@ -89,6 +91,18 @@ func parseCronJobBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.CronJobCon
 			b := val.True()
 			cj.Suspend = &b
 		}
+	}
+
+	// History limits (whole numbers, optional)
+	if attr, ok := content.Attributes["history_limit"]; ok {
+		v, moreDiags := parseHistoryLimit(attr, ctx)
+		diags = append(diags, moreDiags...)
+		cj.HistoryLimit = v
+	}
+	if attr, ok := content.Attributes["failed_history_limit"]; ok {
+		v, moreDiags := parseHistoryLimit(attr, ctx)
+		diags = append(diags, moreDiags...)
+		cj.FailedHistoryLimit = v
 	}
 
 	// Validate image_pull_policy

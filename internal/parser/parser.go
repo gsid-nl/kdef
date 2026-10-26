@@ -3,6 +3,8 @@ package parser
 import (
 	"fmt"
 	"maps"
+	"math"
+	"math/big"
 	"os"
 	"path/filepath"
 	"slices"
@@ -654,6 +656,33 @@ func validateImagePullPolicy(policy string, attr *hcl.Attribute) *hcl.Diagnostic
 		Detail:   "supported values: Always, IfNotPresent, Never",
 		Subject:  attr.Expr.Range().Ptr(),
 	}
+}
+
+// parseHistoryLimit reads a history_limit style attribute: a whole number >= 0.
+func parseHistoryLimit(attr *hcl.Attribute, ctx *hcl.EvalContext) (*int32, hcl.Diagnostics) {
+	val, diags := attr.Expr.Value(ctx)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+	if val.Type() != cty.Number {
+		return nil, append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  fmt.Sprintf("invalid %s", attr.Name),
+			Detail:   fmt.Sprintf("%s must be a whole number >= 0", attr.Name),
+			Subject:  attr.Expr.Range().Ptr(),
+		})
+	}
+	n, acc := val.AsBigFloat().Int64()
+	if acc != big.Exact || n < 0 || n > math.MaxInt32 {
+		return nil, append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  fmt.Sprintf("invalid %s", attr.Name),
+			Detail:   fmt.Sprintf("%s must be a whole number >= 0, got %s", attr.Name, val.AsBigFloat().String()),
+			Subject:  attr.Expr.Range().Ptr(),
+		})
+	}
+	v := int32(n)
+	return &v, diags
 }
 
 // parseRootFile parses a root.kdef file and returns the RootConfig.

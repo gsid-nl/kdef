@@ -39,3 +39,26 @@ func TestGenerateCronJob_Suspend(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateCronJob_HistoryLimits(t *testing.T) {
+	two, zero := int32(2), int32(0)
+
+	cj := GenerateCronJob(types.CronJobConfig{
+		Name:               "x",
+		Image:              "busybox",
+		Schedule:           "* * * * *",
+		HistoryLimit:       &two,
+		FailedHistoryLimit: &zero,
+	})
+	if got := cj.Spec.SuccessfulJobsHistoryLimit; got == nil || *got != 2 {
+		t.Fatalf("SuccessfulJobsHistoryLimit: got %v, want 2", got)
+	}
+	if got := cj.Spec.FailedJobsHistoryLimit; got == nil || *got != 0 {
+		t.Fatalf("FailedJobsHistoryLimit: got %v, want 0", got)
+	}
+
+	cj = GenerateCronJob(types.CronJobConfig{Name: "x", Image: "busybox", Schedule: "* * * * *"})
+	if cj.Spec.SuccessfulJobsHistoryLimit != nil || cj.Spec.FailedJobsHistoryLimit != nil {
+		t.Fatalf("expected history limits to be omitted when unset")
+	}
+}

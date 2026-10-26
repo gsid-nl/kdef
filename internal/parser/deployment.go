@@ -437,7 +437,8 @@ func parseRolloutBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.RolloutCon
 
 	schema := &hcl.BodySchema{
 		Attributes: []hcl.AttributeSchema{
-			{Name: "revision_history_limit"},
+			{Name: "history_limit"},
+			{Name: "revision_history_limit"}, // older name for history_limit
 			{Name: "strategy"},
 			{Name: "max_surge"},
 			{Name: "max_unavailable"},
@@ -450,14 +451,23 @@ func parseRolloutBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.RolloutCon
 		return r, diags
 	}
 
-	if attr, ok := content.Attributes["revision_history_limit"]; ok {
-		val, moreDiags := attr.Expr.Value(ctx)
-		diags = append(diags, moreDiags...)
-		if !moreDiags.HasErrors() {
-			n, _ := val.AsBigFloat().Int64()
-			v := int32(n)
-			r.RevisionHistoryLimit = &v
+	historyAttr, hasNew := content.Attributes["history_limit"]
+	if old, ok := content.Attributes["revision_history_limit"]; ok {
+		if hasNew {
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Duplicate history limit",
+				Detail:   "revision_history_limit is the older name for history_limit; set only history_limit",
+				Subject:  old.Range.Ptr(),
+			})
+		} else {
+			historyAttr = old
 		}
+	}
+	if historyAttr != nil {
+		v, moreDiags := parseHistoryLimit(historyAttr, ctx)
+		diags = append(diags, moreDiags...)
+		r.RevisionHistoryLimit = v
 	}
 
 	if attr, ok := content.Attributes["strategy"]; ok {

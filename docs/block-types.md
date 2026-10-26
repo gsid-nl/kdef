@@ -429,11 +429,11 @@ deployment "web" {
   # --- Rollout & history ---
 
   rollout {
-    revision_history_limit = 3             # old ReplicaSets to keep (K8s default: 10)
-    strategy               = "RollingUpdate" # or "Recreate"
-    max_surge              = "25%"         # int or percentage string
-    max_unavailable        = 1
-    progress_deadline      = 600           # seconds before rollout is marked failed
+    history_limit     = 3               # old ReplicaSets to keep (K8s default: 10); revision_history_limit is the older name
+    strategy          = "RollingUpdate" # or "Recreate"
+    max_surge         = "25%"           # int or percentage string
+    max_unavailable   = 1
+    progress_deadline = 600             # seconds before rollout is marked failed
   }
 
   # --- Raw YAML Escape Hatch ---
@@ -607,6 +607,9 @@ cronjob "send-reminders" {
   deadline    = "4m"         # startingDeadlineSeconds
   restart     = "OnFailure"  # OnFailure (default), Never
   suspend     = false        # when true, k8s skips scheduled runs (default false)
+
+  history_limit        = 2   # successful Jobs to keep (K8s default 3)
+  failed_history_limit = 2   # failed Jobs to keep (K8s default 1)
 
   env {
     APP_NAME = "reminder-worker"

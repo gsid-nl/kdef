@@ -146,6 +146,14 @@ func GenerateCronJob(cj types.CronJobConfig) *batchv1.CronJob {
 		cronJob.Spec.Suspend = cj.Suspend
 	}
 
+	if cj.HistoryLimit != nil {
+		cronJob.Spec.SuccessfulJobsHistoryLimit = cj.HistoryLimit
+	}
+
+	if cj.FailedHistoryLimit != nil {
+		cronJob.Spec.FailedJobsHistoryLimit = cj.FailedHistoryLimit
+	}
+
 	return cronJob
 }
 
