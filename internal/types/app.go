@@ -124,7 +124,7 @@ type ResourcesConfig struct {
 	EphemeralStorageRequest string
 	EphemeralStorageLimit   string
 	// Devices are extended resources a device plugin offers, such as
-	// "squat.ai/dri" or "nvidia.com/gpu", with how many the container gets.
+	// "devic.es/dri" or "nvidia.com/gpu", with how many the container gets.
 	// They have no request..limit range: Kubernetes takes the limit as both.
 	Devices map[string]int64
 }

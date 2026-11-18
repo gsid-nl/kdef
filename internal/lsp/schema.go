@@ -451,7 +451,7 @@ var resourcesSchema = BlockSchema{
 		{Name: "cpu", Doc: `CPU request..limit (e.g. "200m..1000m")`},
 		{Name: "memory", Doc: `Memory request..limit (e.g. "256Mi..512Mi")`},
 		{Name: "ephemeral_storage", Doc: `Ephemeral storage request..limit (e.g. "1Gi..2Gi")`},
-		{Name: "devices", Doc: `Extended resources from a device plugin and how many (e.g. { "squat.ai/dri" = 1 })`},
+		{Name: "devices", Doc: `Extended resources from a device plugin and how many (e.g. { "devic.es/dri" = 1 })`},
 	},
 }
 

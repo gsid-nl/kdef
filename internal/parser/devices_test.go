@@ -28,14 +28,14 @@ deployment "llm" {
 }
 
 func TestParseDevicesAndSupplementalGroups(t *testing.T) {
-	src := devicesSrc(`      devices = { "squat.ai/dri" = 1, "nvidia.com/gpu" = 2 }`, `    supplemental_groups = [992, 44]`)
+	src := devicesSrc(`      devices = { "devic.es/dri" = 1, "nvidia.com/gpu" = 2 }`, `    supplemental_groups = [992, 44]`)
 	result, diags := ParseBytes([]byte(src), "llm.kdef", nil)
 	if diags.HasErrors() {
 		t.Fatalf("parse errors: %v", diags)
 	}
 	dep := result.Deployments[0]
 	devices := dep.Containers[0].Resources.Devices
-	if devices["squat.ai/dri"] != 1 || devices["nvidia.com/gpu"] != 2 || len(devices) != 2 {
+	if devices["devic.es/dri"] != 1 || devices["nvidia.com/gpu"] != 2 || len(devices) != 2 {
 		t.Errorf("Devices: got %v", devices)
 	}
 	groups := dep.SecurityContext.SupplementalGroups
@@ -50,11 +50,11 @@ func TestParseDevicesAndSupplementalGroups(t *testing.T) {
 func TestParseDevicesInvalid(t *testing.T) {
 	for name, devices := range map[string]string{
 		"no domain":    `{ "gpu" = 1 }`,
-		"zero":         `{ "squat.ai/dri" = 0 }`,
-		"fraction":     `{ "squat.ai/dri" = 1.5 }`,
-		"text count":   `{ "squat.ai/dri" = "1" }`,
-		"not a map":    `["squat.ai/dri"]`,
-		"plain string": `"squat.ai/dri"`,
+		"zero":         `{ "devic.es/dri" = 0 }`,
+		"fraction":     `{ "devic.es/dri" = 1.5 }`,
+		"text count":   `{ "devic.es/dri" = "1" }`,
+		"not a map":    `["devic.es/dri"]`,
+		"plain string": `"devic.es/dri"`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			src := devicesSrc(`      devices = `+devices, "")

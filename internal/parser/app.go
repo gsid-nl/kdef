@@ -553,7 +553,7 @@ func parseResourcesBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Resource
 	return res, diags
 }
 
-// parseDevices reads `devices = { "squat.ai/dri" = 1 }`: extended resource
+// parseDevices reads `devices = { "devic.es/dri" = 1 }`: extended resource
 // names (always with a domain, so never cpu or memory) and a whole number > 0.
 func parseDevices(attr *hcl.Attribute, ctx *hcl.EvalContext) (map[string]int64, hcl.Diagnostics) {
 	val, diags := attr.Expr.Value(ctx)
@@ -569,14 +569,14 @@ func parseDevices(attr *hcl.Attribute, ctx *hcl.EvalContext) (map[string]int64, 
 		})
 	}
 	if !val.Type().IsObjectType() && !val.Type().IsMapType() {
-		return nil, invalid(`devices must be a map of extended resource names to counts, e.g. { "squat.ai/dri" = 1 }`)
+		return nil, invalid(`devices must be a map of extended resource names to counts, e.g. { "devic.es/dri" = 1 }`)
 	}
 	devices := make(map[string]int64)
 	for it := val.ElementIterator(); it.Next(); {
 		k, v := it.Element()
 		name := k.AsString()
 		if !strings.Contains(name, "/") {
-			return nil, invalid(fmt.Sprintf("device %q must be an extended resource with a domain, such as \"squat.ai/dri\"", name))
+			return nil, invalid(fmt.Sprintf("device %q must be an extended resource with a domain, such as \"devic.es/dri\"", name))
 		}
 		if v.Type() != cty.Number {
 			return nil, invalid(fmt.Sprintf("device %q must have a whole number > 0", name))

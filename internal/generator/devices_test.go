@@ -14,7 +14,7 @@ func gpuContainer() types.ContainerConfig {
 		Resources: &types.ResourcesConfig{
 			CPURequest: "2",
 			CPULimit:   "8",
-			Devices:    map[string]int64{"squat.ai/dri": 1},
+			Devices:    map[string]int64{"devic.es/dri": 1},
 		},
 	}
 }
@@ -31,12 +31,12 @@ func TestGenerateDeploymentV2_DevicesAndSupplementalGroups(t *testing.T) {
 		t.Fatalf("render error: %v", err)
 	}
 	yaml := string(out)
-	for _, want := range []string{"squat.ai/dri: \"1\"", "fsGroup: 1000", "supplementalGroups:\n        - 992"} {
+	for _, want := range []string{"devic.es/dri: \"1\"", "fsGroup: 1000", "supplementalGroups:\n        - 992"} {
 		if !strings.Contains(yaml, want) {
 			t.Errorf("yaml missing %q:\n%s", want, yaml)
 		}
 	}
-	if strings.Count(yaml, "squat.ai/dri") != 1 {
+	if strings.Count(yaml, "devic.es/dri") != 1 {
 		t.Errorf("a device belongs in the limits only:\n%s", yaml)
 	}
 }
@@ -55,7 +55,7 @@ func TestGenerateDaemonSet_SupplementalGroupsWithoutFSGroup(t *testing.T) {
 	if !strings.Contains(yaml, "supplementalGroups:") || strings.Contains(yaml, "fsGroup") {
 		t.Errorf("want supplementalGroups without fsGroup:\n%s", yaml)
 	}
-	if !strings.Contains(yaml, "squat.ai/dri: \"1\"") {
+	if !strings.Contains(yaml, "devic.es/dri: \"1\"") {
 		t.Errorf("yaml missing the device:\n%s", yaml)
 	}
 }

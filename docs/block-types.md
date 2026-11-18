@@ -1014,7 +1014,7 @@ deployment "llm" {
     resources {
       cpu     = "2..8"
       memory  = "4Gi..6Gi"
-      devices = { "squat.ai/dri" = 1 }   # from generic-device-plugin
+      devices = { "devic.es/dri" = 1 }   # from generic-device-plugin
     }
 
     security_context {

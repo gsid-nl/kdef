@@ -376,7 +376,7 @@ func writeResources(b *strings.Builder, c corev1.Container, indent ...string) {
 }
 
 // writeDevices renders extended resources (names with a domain, such as
-// squat.ai/dri) from the limits as `devices = { ... }`, sorted by name.
+// devic.es/dri) from the limits as `devices = { ... }`, sorted by name.
 func writeDevices(b *strings.Builder, limits corev1.ResourceList, indent string) {
 	var names []string
 	for name := range limits {
