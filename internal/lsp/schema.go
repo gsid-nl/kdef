@@ -451,6 +451,7 @@ var resourcesSchema = BlockSchema{
 		{Name: "cpu", Doc: `CPU request..limit (e.g. "200m..1000m")`},
 		{Name: "memory", Doc: `Memory request..limit (e.g. "256Mi..512Mi")`},
 		{Name: "ephemeral_storage", Doc: `Ephemeral storage request..limit (e.g. "1Gi..2Gi")`},
+		{Name: "devices", Doc: `Extended resources from a device plugin and how many (e.g. { "squat.ai/dri" = 1 })`},
 	},
 }
 
@@ -485,6 +486,7 @@ var securityContextSchema = BlockSchema{
 		{Name: "run_as_non_root", Doc: "Require non-root (bool)"},
 		{Name: "read_only_root", Doc: "Read-only root filesystem (bool)"},
 		{Name: "fs_group", Doc: "Filesystem group ID (pod-level)"},
+		{Name: "supplemental_groups", Doc: "Extra group IDs for all processes, e.g. [992] for a host's render group (pod-level)"},
 		{Name: "privileged", Doc: "Run container in privileged mode (bool, container-level)"},
 	},
 }

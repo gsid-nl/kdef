@@ -86,7 +86,26 @@ func buildResources(r *types.ResourcesConfig) corev1.ResourceRequirements {
 			res.Limits[corev1.ResourceEphemeralStorage] = resource.MustParse(r.EphemeralStorageLimit)
 		}
 	}
+	// Extended resources only as a limit: Kubernetes uses it as the request too.
+	for name, count := range r.Devices {
+		if res.Limits == nil {
+			res.Limits = corev1.ResourceList{}
+		}
+		res.Limits[corev1.ResourceName(name)] = *resource.NewQuantity(count, resource.DecimalSI)
+	}
 	return res
+}
+
+// buildPodSecurityContext makes the pod-level security context: fs_group and
+// supplemental_groups. Nil when neither is set.
+func buildPodSecurityContext(sc *types.SecurityContextConfig) *corev1.PodSecurityContext {
+	if sc == nil || (sc.FSGroup == nil && len(sc.SupplementalGroups) == 0) {
+		return nil
+	}
+	return &corev1.PodSecurityContext{
+		FSGroup:            sc.FSGroup,
+		SupplementalGroups: sc.SupplementalGroups,
+	}
 }
 
 func buildVolumeMount(v types.VolumeConfig) corev1.VolumeMount {

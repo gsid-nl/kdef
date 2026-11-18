@@ -97,10 +97,8 @@ func buildPodSpec(in PodTemplateInput, extraClaimNames map[string]bool) corev1.P
 	if in.ServiceAccountName != "" {
 		spec.ServiceAccountName = in.ServiceAccountName
 	}
-	if in.SecurityContext != nil && in.SecurityContext.FSGroup != nil {
-		spec.SecurityContext = &corev1.PodSecurityContext{
-			FSGroup: in.SecurityContext.FSGroup,
-		}
+	if psc := buildPodSecurityContext(in.SecurityContext); psc != nil {
+		spec.SecurityContext = psc
 	}
 	if len(in.NodeSelector) > 0 {
 		spec.NodeSelector = in.NodeSelector

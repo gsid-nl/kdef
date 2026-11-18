@@ -74,11 +74,7 @@ func renderDeploymentBlock(group AppGroup) string {
 	// (the generator deduplicates them)
 
 	// Pod-level security context
-	if podSpec.SecurityContext != nil && podSpec.SecurityContext.FSGroup != nil {
-		b.WriteString("\n  security_context {\n")
-		b.WriteString(fmt.Sprintf("    fs_group = %d\n", *podSpec.SecurityContext.FSGroup))
-		b.WriteString("  }\n")
-	}
+	writePodSecurityContext(&b, podSpec.SecurityContext)
 
 	writeNodeSelector(&b, podSpec.NodeSelector)
 	writeHostPodFlags(&b, podSpec)

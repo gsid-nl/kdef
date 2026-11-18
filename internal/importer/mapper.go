@@ -371,7 +371,49 @@ func writeResources(b *strings.Builder, c corev1.Container, indent ...string) {
 			b.WriteString(fmt.Sprintf("%sephemeral_storage = %q\n", inner, esReq.String()))
 		}
 	}
+	writeDevices(b, c.Resources.Limits, inner)
 	b.WriteString(fmt.Sprintf("%s}\n", ind))
+}
+
+// writeDevices renders extended resources (names with a domain, such as
+// squat.ai/dri) from the limits as `devices = { ... }`, sorted by name.
+func writeDevices(b *strings.Builder, limits corev1.ResourceList, indent string) {
+	var names []string
+	for name := range limits {
+		if strings.Contains(string(name), "/") {
+			names = append(names, string(name))
+		}
+	}
+	if len(names) == 0 {
+		return
+	}
+	sort.Strings(names)
+	b.WriteString(fmt.Sprintf("%sdevices = {\n", indent))
+	for _, name := range names {
+		q := limits[corev1.ResourceName(name)]
+		b.WriteString(fmt.Sprintf("%s  %q = %d\n", indent, name, q.Value()))
+	}
+	b.WriteString(fmt.Sprintf("%s}\n", indent))
+}
+
+// writePodSecurityContext renders the pod-level security context: fs_group
+// and supplemental_groups.
+func writePodSecurityContext(b *strings.Builder, sc *corev1.PodSecurityContext) {
+	if sc == nil || (sc.FSGroup == nil && len(sc.SupplementalGroups) == 0) {
+		return
+	}
+	b.WriteString("\n  security_context {\n")
+	if sc.FSGroup != nil {
+		b.WriteString(fmt.Sprintf("    fs_group = %d\n", *sc.FSGroup))
+	}
+	if len(sc.SupplementalGroups) > 0 {
+		groups := make([]string, len(sc.SupplementalGroups))
+		for i, g := range sc.SupplementalGroups {
+			groups[i] = fmt.Sprintf("%d", g)
+		}
+		b.WriteString(fmt.Sprintf("    supplemental_groups = [%s]\n", strings.Join(groups, ", ")))
+	}
+	b.WriteString("  }\n")
 }
 
 func writeEnv(b *strings.Builder, c corev1.Container, indent ...string) {
@@ -670,6 +712,14 @@ func writeSecurityContext(b *strings.Builder, containerSC *corev1.SecurityContex
 	}
 	if podSC != nil && podSC.FSGroup != nil {
 		sc.WriteString(fmt.Sprintf("%sfs_group        = %d\n", inner, *podSC.FSGroup))
+		hasContent = true
+	}
+	if podSC != nil && len(podSC.SupplementalGroups) > 0 {
+		groups := make([]string, len(podSC.SupplementalGroups))
+		for i, g := range podSC.SupplementalGroups {
+			groups[i] = fmt.Sprintf("%d", g)
+		}
+		sc.WriteString(fmt.Sprintf("%ssupplemental_groups = [%s]\n", inner, strings.Join(groups, ", ")))
 		hasContent = true
 	}
 

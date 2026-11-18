@@ -123,6 +123,10 @@ type ResourcesConfig struct {
 	MemoryLimit             string
 	EphemeralStorageRequest string
 	EphemeralStorageLimit   string
+	// Devices are extended resources a device plugin offers, such as
+	// "squat.ai/dri" or "nvidia.com/gpu", with how many the container gets.
+	// They have no request..limit range: Kubernetes takes the limit as both.
+	Devices map[string]int64
 }
 
 type VolumeConfig struct {
@@ -236,7 +240,10 @@ type SecurityContextConfig struct {
 	RunAsNonRoot *bool
 	ReadOnlyRoot *bool
 	FSGroup      *int64
-	Privileged   *bool // container-level only
+	// SupplementalGroups are extra GIDs for every process in the pod, such as
+	// the host's render group for a GPU (pod-level).
+	SupplementalGroups []int64
+	Privileged         *bool // container-level only
 }
 
 // TolerationConfig matches Kubernetes Toleration semantics.

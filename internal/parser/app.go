@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"math/big"
 	"sort"
 	"strconv"
 	"strings"
@@ -504,6 +505,7 @@ func parseResourcesBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Resource
 			{Name: "cpu"},
 			{Name: "memory"},
 			{Name: "ephemeral_storage"},
+			{Name: "devices"},
 		},
 	}
 
@@ -542,7 +544,50 @@ func parseResourcesBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Resource
 		}
 	}
 
+	if attr, ok := content.Attributes["devices"]; ok {
+		devices, moreDiags := parseDevices(attr, ctx)
+		diags = append(diags, moreDiags...)
+		res.Devices = devices
+	}
+
 	return res, diags
+}
+
+// parseDevices reads `devices = { "squat.ai/dri" = 1 }`: extended resource
+// names (always with a domain, so never cpu or memory) and a whole number > 0.
+func parseDevices(attr *hcl.Attribute, ctx *hcl.EvalContext) (map[string]int64, hcl.Diagnostics) {
+	val, diags := attr.Expr.Value(ctx)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+	invalid := func(detail string) hcl.Diagnostics {
+		return append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "invalid devices",
+			Detail:   detail,
+			Subject:  attr.Expr.Range().Ptr(),
+		})
+	}
+	if !val.Type().IsObjectType() && !val.Type().IsMapType() {
+		return nil, invalid(`devices must be a map of extended resource names to counts, e.g. { "squat.ai/dri" = 1 }`)
+	}
+	devices := make(map[string]int64)
+	for it := val.ElementIterator(); it.Next(); {
+		k, v := it.Element()
+		name := k.AsString()
+		if !strings.Contains(name, "/") {
+			return nil, invalid(fmt.Sprintf("device %q must be an extended resource with a domain, such as \"squat.ai/dri\"", name))
+		}
+		if v.Type() != cty.Number {
+			return nil, invalid(fmt.Sprintf("device %q must have a whole number > 0", name))
+		}
+		n, acc := v.AsBigFloat().Int64()
+		if acc != big.Exact || n < 1 {
+			return nil, invalid(fmt.Sprintf("device %q must have a whole number > 0", name))
+		}
+		devices[name] = n
+	}
+	return devices, diags
 }
 
 // parseResourceRange splits "200m..1000m" into request and limit.
@@ -811,6 +856,7 @@ func parseSecurityContextBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Se
 			{Name: "run_as_non_root"},
 			{Name: "read_only_root"},
 			{Name: "fs_group"},
+			{Name: "supplemental_groups"},
 			{Name: "privileged"},
 		},
 	}
@@ -871,6 +917,39 @@ func parseSecurityContextBlock(block *hcl.Block, ctx *hcl.EvalContext) (types.Se
 		if !moreDiags.HasErrors() {
 			n, _ := val.AsBigFloat().Int64()
 			sc.FSGroup = &n
+		}
+	}
+
+	if attr, ok := content.Attributes["supplemental_groups"]; ok {
+		val, moreDiags := attr.Expr.Value(ctx)
+		diags = append(diags, moreDiags...)
+		if !moreDiags.HasErrors() {
+			if !val.CanIterateElements() || val.Type().IsMapType() || val.Type().IsObjectType() {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "invalid supplemental_groups",
+					Detail:   "supplemental_groups must be a list of group IDs, e.g. [992]",
+					Subject:  attr.Expr.Range().Ptr(),
+				})
+			} else {
+				for it := val.ElementIterator(); it.Next(); {
+					_, v := it.Element()
+					n, acc := int64(-1), big.Exact
+					if v.Type() == cty.Number {
+						n, acc = v.AsBigFloat().Int64()
+					}
+					if acc != big.Exact || n < 0 {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "invalid supplemental_groups",
+							Detail:   "every group ID in supplemental_groups must be a whole number >= 0",
+							Subject:  attr.Expr.Range().Ptr(),
+						})
+						break
+					}
+					sc.SupplementalGroups = append(sc.SupplementalGroups, n)
+				}
+			}
 		}
 	}
 

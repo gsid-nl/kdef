@@ -59,11 +59,7 @@ func renderDaemonSetBlock(group AppGroup) string {
 		renderInitContainerBlock(&b, ic)
 	}
 
-	if podSpec.SecurityContext != nil && podSpec.SecurityContext.FSGroup != nil {
-		b.WriteString("\n  security_context {\n")
-		b.WriteString(fmt.Sprintf("    fs_group = %d\n", *podSpec.SecurityContext.FSGroup))
-		b.WriteString("  }\n")
-	}
+	writePodSecurityContext(&b, podSpec.SecurityContext)
 
 	writeNodeSelector(&b, podSpec.NodeSelector)
 	writeHostPodFlags(&b, podSpec)

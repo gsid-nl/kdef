@@ -344,7 +344,8 @@ deployment "web" {
   # --- Pod-level Security Context ---
 
   security_context {
-    fs_group = 1000
+    fs_group            = 1000
+    supplemental_groups = [992]   # optional: extra GIDs, e.g. the host's render group
   }
 
   # --- Service ---
@@ -986,6 +987,45 @@ daemonset "gpu-driver" {
     security_context {
       privileged = true
     }
+  }
+}
+```
+
+## Devices: GPUs and other extended resources
+
+A container gets a device that a device plugin offers (a GPU, a render node,
+an FPGA) with `devices` in its `resources` block: the extended resource name,
+always with a domain, and how many. It is rendered as a limit only; Kubernetes
+uses the limit as the request for extended resources, and only schedules the
+pod on a node that has one free.
+
+When the device node belongs to a group on the host (such as `render` for
+`/dev/dri/renderD128`), a non-root container also needs that group:
+`supplemental_groups` in the pod-level `security_context`.
+
+```hcl
+deployment "llm" {
+  namespace = "ai"
+
+  container "llm" {
+    image = "ghcr.io/ggml-org/llama.cpp:server-vulkan"
+    args  = ["--n-gpu-layers", "99"]
+
+    resources {
+      cpu     = "2..8"
+      memory  = "4Gi..6Gi"
+      devices = { "squat.ai/dri" = 1 }   # from generic-device-plugin
+    }
+
+    security_context {
+      run_as_user     = 1000
+      run_as_non_root = true
+    }
+  }
+
+  security_context {
+    fs_group            = 1000
+    supplemental_groups = [992]   # GID of `render` on the nodes
   }
 }
 ```

@@ -107,10 +107,8 @@ func GenerateDeploymentV2(dep types.DeploymentConfig, ingressDefaults *types.Ing
 	if dep.ServiceAccountName != "" {
 		spec.ServiceAccountName = dep.ServiceAccountName
 	}
-	if dep.SecurityContext != nil && dep.SecurityContext.FSGroup != nil {
-		spec.SecurityContext = &corev1.PodSecurityContext{
-			FSGroup: dep.SecurityContext.FSGroup,
-		}
+	if psc := buildPodSecurityContext(dep.SecurityContext); psc != nil {
+		spec.SecurityContext = psc
 	}
 	if len(dep.NodeSelector) > 0 {
 		spec.NodeSelector = dep.NodeSelector
